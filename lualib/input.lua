@@ -54,7 +54,7 @@ function input.parseInputLocation(str)
     for element in str:gmatch("([^%.]+)") do  
         if idx == 1 then  
             if not drivers[element] then  
-                error("There is no driver for the type '"..element.."'")
+                error("There is no driver for the type '"..element.."' in "..str)
             end
             controllerType = element
         elseif idx == 2 then  
@@ -178,7 +178,7 @@ function input.Load()
     drivers.Start(maxN)
 
     if mode == "BLE" then
-        setLogDiscoveredBleDevices(false)
+        setLogDiscoveredBleDevices(true)
         generic.displaySplashMessage("Starting:\nBLE")
         startBLE()
         setMaximumControls(maxN)
@@ -231,14 +231,10 @@ function input.Load()
         error("Invalid input mode: "..tostring(mode))
     end
 
-    drivers.EnableDrivers(confs.input.drivers)
-    if confs.input.enableHidControllers then
-        drivers.EnableGenericAndroidMouse()
-    end
+    drivers.EnableDrivers(confs.input)
+
 
     drivers.WrapUp()
-    
-
 
     input.SetKeybinds(confs.keybinds) 
 end

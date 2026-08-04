@@ -19,6 +19,7 @@ local drivers = {
     mouse = {},
     keyboard = {},
     generic = {},
+    paired_data = {},
 
     validEntries = {
         ['joystick'] = true,
@@ -80,10 +81,35 @@ function drivers.Start(maxClients)
     end
 end
 
-function drivers.EnableDrivers(driversToLoad)
+function drivers.EnableDrivers(input)
+    local driversToLoad = input.drivers
+    if input.enableHidControllers then
+        local hid = {
+            mode=drivers.device_attribute_map["hid"],
+            onEnable = function()
+                if not hasBLEStarted() then
+                    return false
+                end
+                hid.handler = BleServiceHandler("00001812-0000-1000-8000-00805f9b34fb")
+                hid.handler:SetOnConnectCallback(drivers.onConnectHID)
+                hid.handler:SetOnDisconnectCallback(drivers.onDisconnectHID)
+                hid.mouseListener = drivers.handler:AddCharacteristics("2a4d")
+                hid.mouseListener:SetSubscribeCallback(drivers.onHidCallback) 
+                hid.mouseListener:SetCallbackModeStream(false)
+                return true
+            end
+        }
+        drivers.loaded["hid"] = hid
+    end
+
     for i,driverName in pairs(driversToLoad) do  
         local success, content = pcall(dofile,"/lualib/drivers/"..driverName..'.lua')
-        if success and content then  
+        if success and content then
+            if drivers.loaded[driverName] then  
+                error("Duplicated driver declared: "..driverName)
+            end  
+            drivers.loaded[driverName] = content
+            --todo change to derivate
             if content.type == "hid" then
                 if content.mode then  
                     for i, mode in pairs(content.mode) do 
@@ -95,11 +121,8 @@ function drivers.EnableDrivers(driversToLoad)
                 else 
                     error("No mode set for "..driverName)
                 end
-                if drivers.loaded[driverName] then  
-                    error("Duplicated driver declared: "..driverName)
-                end
+
                 content.attribute_map = drivers.device_attribute_map[driverName]
-                drivers.loaded[driverName] = content
                 print("Loaded hid driver "..driverName)
             elseif content.type == "core" then
                 drivers.validEntries[driverName] = true
@@ -116,10 +139,38 @@ function drivers.EnableDrivers(driversToLoad)
 end
 
 function drivers.WrapUp()
-    for i,b in pairs(drivers.core) do  
-        if not b.onEnable() then  
+    for i,b in pairs(drivers.loaded) do  
+        if b.onEnable and not b.onEnable() then  
             log("Failed to enable core driver "..tostring(i))
         end
+        if not b.handler and b.type == 'core' then  
+            error("Driver "..i.." dont have a valid handler")
+        end
+    end
+
+    local confs = configloader.Get()
+
+    if confs.input.pairController then
+        setScanModeByAddress(true)
+        print("Connect by paired only")
+        drivers.registerPaired = true
+        local pairedRaw = dictGet("paired_data")
+        if pairedRaw ~= "" then  
+            local pairedData = json.decode(pairedRaw)
+            drivers.paired_data = pairedData
+            for driverName, devices in pairs(pairedData) do  
+                local drv = drivers.loaded[driverName]
+                if drv then  
+                    for addr, __ in pairs(devices) do
+                        drv.handler:AddPairedDeviceAddress(addr)
+                    end
+                end
+            end
+        else 
+            setScanModeByAddress(false)
+        end
+    else  
+        setScanModeByAddress(false)
     end
 end
 
@@ -142,18 +193,46 @@ function drivers.FindDriver(connectionId, controllerId, address, name)
     return nil, nil
 end
 
-function drivers.onDisconnectHID(connectionId, controllerId, reason)
-    log("Disconnected "..connectionId.." due ".. reason)
+
+function drivers.DisconnectDevice(controllerId, driverName)
     drivers.type_by_id[controllerId] = nil
 end
 
-function drivers.onConnectHID(connectionId, controllerId, address, name)
-    drivers.type_by_id[controllerId] = {mode=drivers.device_attribute_map["hid"]}
-    local matchedDriver, matchName = drivers.FindDriver(connectionId, controllerId, address, name)
-    matchName = matchName or "hid"
-    if matchedDriver then  
-        drivers.type_by_id[controllerId] = matchedDriver
+function drivers.ConnectDevice(controllerId, address, driverName)
+    --Check if is a valid driver
+    local driverHandle = drivers.loaded[driverName]
+
+    if not driverHandle then  
+        error("No driver named '"..driverName.."'")
+        return nil
     end
+
+    drivers.type_by_id[controllerId] = driverHandle
+    --If is pairing mode, then we should check if this is a new device, if so, we save it!
+    if drivers.registerPaired then  
+        if not drivers.paired_data[driverName] then  
+            drivers.paired_data[driverName] = {}
+        end
+        local obj = drivers.paired_data[driverName]
+        if not obj[address] then  
+            obj[address] = true
+            driverHandle.handler:AddPairedDeviceAddress(address)
+            dictSet("paired_data", json.encode(drivers.paired_data))
+        end
+        setScanModeByAddress(true)
+    end
+    return true
+end 
+
+
+function drivers.onDisconnectHID(connectionId, controllerId, reason)
+    log("Disconnected "..connectionId.." due ".. reason)
+    drivers.DisconnectDevice(controllerId, 'hid')
+end
+
+function drivers.onConnectHID(connectionId, controllerId, address, name)
+    local matchedDriver, matchName = drivers.FindDriver(connectionId, controllerId, address, name)
+    drivers.ConnectDevice(controllerId, address, matchName or 'hid')
 
     log("Connected conId="..connectionId.." controller="..controllerId.." addr=\""..address.."\" name=["..name.."] type="..matchName)
 end
@@ -257,23 +336,6 @@ function drivers.onHidCallback(connectionId, controllerId, data)
     end
 end
 
-function drivers.EnableGenericAndroidMouse()
-    if not versions.canRun("2.0.0") then 
-        --No mouse in the legacy controller
-        log("You are running protopanda on a older version. Minimum version required is 2.0.0 to run mouse input") 
-        return false
-    end
-    if not hasBLEStarted() then 
-        return false
-    end
-    drivers.mouseHandler = BleServiceHandler("00001812-0000-1000-8000-00805f9b34fb")
-    drivers.mouseHandler:SetOnConnectCallback(drivers.onConnectHID)
-    drivers.mouseHandler:SetOnDisconnectCallback(drivers.onDisconnectHID)
-    drivers.mouseListener = drivers.mouseHandler:AddCharacteristics("2a4d")
-    drivers.mouseListener:SetSubscribeCallback(drivers.onHidCallback) 
-    drivers.mouseListener:SetCallbackModeStream(false)
-    return true
-end
 
 function drivers.update()
     for i,b in pairs(drivers.type_by_id) do  

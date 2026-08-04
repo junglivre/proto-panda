@@ -364,10 +364,6 @@ int getClientIdFromControllerId(uint32_t id)
   return g_remoteControls.GetClientIdFromControllerId(id);
 }
 
-int getRRSI(uint32_t clientid)
-{
-  return g_remoteControls.GetRSSI(clientid);
-}
 
 void setLogDiscoveredBle(bool log)
 {
@@ -560,7 +556,11 @@ void LuaInterface::RegisterMethods()
   m_lua->FuncRegister("setMaximumControls", setMaximumControls);
   m_lua->FuncRegister("setLogDiscoveredBleDevices", setLogDiscoveredBle);
   m_lua->FuncRegister("getClientIdFromControllerId", getClientIdFromControllerId);
-  m_lua->FuncRegister("getRRSI", getRRSI);
+
+  m_lua->FuncRegisterFromObjectOpt("getRRSI", &g_remoteControls, &BleManager::GetRSSI);
+  m_lua->FuncRegisterFromObjectOpt("setScanModeByAddress", &g_remoteControls, &BleManager::SetScanModeByAddress);
+  m_lua->FuncRegisterFromObjectOpt("isScanningByAddress", &g_remoteControls, &BleManager::IsScanningByAddress);
+
   #endif
 
 
@@ -959,12 +959,12 @@ bool LuaInterface::Start()
       return nullptr;
     }
   }, &EmptyGC);
+  ClassRegister<BleServiceHandler>::RegisterClassMethod(_state,"BleServiceHandler","AddPairedDeviceAddress",&BleServiceHandler::AddPairedDeviceAddress);
   ClassRegister<BleServiceHandler>::RegisterClassMethod(_state,"BleServiceHandler","AddCharacteristics",&BleServiceHandler::AddCharacteristics);
   ClassRegister<BleServiceHandler>::RegisterClassMethod(_state,"BleServiceHandler","SetOnConnectCallback",&BleServiceHandler::SetOnConnectCallback);
   ClassRegister<BleServiceHandler>::RegisterClassMethod(_state,"BleServiceHandler","SetOnDisconnectCallback",&BleServiceHandler::SetOnDisconnectCallback);
   ClassRegister<BleServiceHandler>::RegisterClassMethod(_state,"BleServiceHandler","WriteToCharacteristics",&BleServiceHandler::WriteToCharacteristics, true);
   ClassRegister<BleServiceHandler>::RegisterClassMethod(_state,"BleServiceHandler","GetCharacteristics",&BleServiceHandler::GetCharacteristicsFromOurService);
-  ClassRegister<BleServiceHandler>::RegisterClassMethod(_state,"BleServiceHandler","AddAddressRequired",&BleServiceHandler::AddAddressRequired);
   ClassRegister<BleServiceHandler>::RegisterClassMethod(_state,"BleServiceHandler","AddNameRequired",&BleServiceHandler::AddNameRequired);
   ClassRegister<BleServiceHandler>::RegisterClassMethod(_state,"BleServiceHandler","GetServices",&BleServiceHandler::GetServices);
   ClassRegister<BleServiceHandler>::RegisterClassMethod(_state,"BleServiceHandler","ReadFromCharacteristics",&BleServiceHandler::ReadFromCharacteristics);

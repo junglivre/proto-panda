@@ -8,49 +8,81 @@
 BleManager* BleManager::m_myself = nullptr;
 
 
+void BleManager::RequestConnection(const NimBLEAdvertisedDevice* advertisedDevice, BleServiceHandler* handler){
+  setScanningMode(false);
+  toConnect = ConnectionRequest(
+    advertisedDevice->getAddress().toString(),
+    advertisedDevice->getAddress().getType(),
+    advertisedDevice->getName(),
+    handler,
+    new BluetoothDeviceHandler()
+  );
+}
+
+bool BleManager::TryConnectByAddress(const NimBLEAdvertisedDevice* advertisedDevice){
+  auto pairedDevices = GetPairedDevices();
+  auto it = pairedDevices.find(advertisedDevice->getAddress().toString());
+  if (it == pairedDevices.end()){
+    return false;
+  }
+
+  BleServiceHandler* handler = it->second;
+
+  if (!toConnect.ready){
+    RequestConnection(advertisedDevice, handler);
+  }else{
+    Logger::Info("Cannot connect because its not ready");
+  }
+  return true; 
+}
+
+bool BleManager::TryConnectByService(const NimBLEAdvertisedDevice* advertisedDevice){
+  auto acceptedServices = GetAcceptedServices();
+  for (auto &it : acceptedServices) {
+    if (it.second == nullptr || !advertisedDevice->isAdvertisingService(it.second->uuid)){
+      continue;
+    }
+
+    BleServiceHandler* handler = it.second;
+    bool canConnect = true;
+    bool matchedTrue = true;
+
+    if (handler->nameMap.size() > 0){
+      auto nameIt = handler->nameMap.find(advertisedDevice->getName());
+      canConnect = (nameIt != handler->nameMap.end()) && nameIt->second;
+      if (!matchedTrue){
+        Serial.printf("Expected match name and address. But address failed");
+        canConnect = false;
+      }
+    }
+
+    Logger::Info("Found Device: %s\n", advertisedDevice->getName().c_str());
+    Logger::Info("Address: %s\n", advertisedDevice->getAddress().toString().c_str());
+
+    if (canConnect && !toConnect.ready){
+      RequestConnection(advertisedDevice, handler);
+    }else{
+      Logger::Info("Cannot connect because its not present in the addresses");
+    }
+    return true; // matched a service entry, caller should stop searching
+  }
+  return false; // no accepted service matched
+}
+
+
 void AdvertisedDeviceCallbacks::onResult(const NimBLEAdvertisedDevice* advertisedDevice) {
   if (bleObj->canLogDiscoveredClients()){
     Logger::Info("[BLE] Advertised Device found: %s", advertisedDevice->toString().c_str());
   }
+
   xSemaphoreTake(bleObj->m_mutex, portMAX_DELAY);
-  auto acceptedServices = bleObj->GetAcceptedServices();
-  for (auto &it : acceptedServices) {
-    if(it.second != nullptr && advertisedDevice->isAdvertisingService(it.second->uuid)){
-      bool canConnect = true;
-      bool matchedTrue = true;
-      if (it.second->addrMap.size() > 0){
-        auto addrIt = it.second->addrMap.find(advertisedDevice->getAddress().toString());
-        canConnect = (addrIt != it.second->addrMap.end()) && addrIt->second;
-        matchedTrue = canConnect;
-      }
 
-      if (it.second->nameMap.size() > 0){
-        auto nameIt = it.second->nameMap.find(advertisedDevice->getName());
-        canConnect = (nameIt != it.second->nameMap.end()) && nameIt->second;
-        if (!matchedTrue){
-          Serial.printf("Expected match name and address. But address failed");
-          canConnect = false;
-        }
-      }
-
-      Logger::Info("Found HID Device: %s\n", advertisedDevice->getName().c_str());
-      Logger::Info("Address: %s\n", advertisedDevice->getAddress().toString().c_str());
-      if (canConnect && !bleObj->toConnect.ready){
-        bleObj->setScanningMode(false);
-        bleObj->toConnect = ConnectionRequest(
-          advertisedDevice->getAddress().toString(), 
-          advertisedDevice->getAddress().getType(),
-          advertisedDevice->getName(),
-          it.second, 
-          new BluetoothDeviceHandler()
-        );
-      }else{
-        Logger::Info("Cannot connect because its not present in the addresses");
-      }
-      xSemaphoreGive(bleObj->m_mutex);
-      return;
-    }
+  if (bleObj->IsScanningByAddress()){
+    bleObj->TryConnectByAddress(advertisedDevice);
+  }else{
+    bleObj->TryConnectByService(advertisedDevice);
   }
+
   xSemaphoreGive(bleObj->m_mutex);
 }
 
@@ -289,6 +321,9 @@ bool BleManager::beginRadio(int powerLevel){
 
 
 void BleManager::sendUpdatesToLua(){
+  for (auto &it : pairedHandlers){
+    it.second->SendMessages();
+  }
   for (auto &it : handlers){
     it.second->SendMessages();
   }
@@ -300,9 +335,12 @@ void BleManager::beginScanning(){
   m_scanStartAt = millis()+1000;
 }
 
+void BleManager::AddPairedDeviceAddress(std::string addr, BleServiceHandler* obj){
+  pairedHandlers[addr] = obj;
+}
+
 void BleManager::AddAcceptedService(std::string name, BleServiceHandler* obj){
   handlers[name] = obj;
-  handlersAsync.emplace_back(std::tuple<std::string,BleServiceHandler*>(name, obj));
 }
 
 void BleManager::update(){
