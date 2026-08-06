@@ -329,10 +329,23 @@ void BleManager::sendUpdatesToLua(){
   }
 }
 
-void BleManager::beginScanning(){
+bool BleManager::beginScanning(){
+  if (isScanning){
+    return false;
+  }
   isScanning = false;
   m_canScan = true;
-  m_scanStartAt = millis()+1000;
+  lastScanClearTime = millis()+600;
+  m_scanStartAt = millis()+500;
+  return true;
+}
+
+bool BleManager::stopScanning(){
+  if (!isScanning){
+    return false;
+  }
+  m_pauseScan = true;
+  return true;
 }
 
 void BleManager::AddPairedDeviceAddress(std::string addr, BleServiceHandler* obj){

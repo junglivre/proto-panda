@@ -29,13 +29,14 @@ class BleManager{
     bool beginRadio(int powerLevel=ESP_PWR_LVL_P9);
     void update();
     void sendUpdatesToLua();
-    void beginScanning();
+    bool beginScanning();
+    bool stopScanning();
 
     
     void setMaximumControls(int n){maxClients = n;};
 
     int getConnectedClientsCount(){
-      return handlers.size();
+      return clientCount;
     }
 
     bool isElementIdConnected(int id);

@@ -302,10 +302,6 @@ void LuaInterface::luaCallbackError(const char *errMsg, lua_State *L)
   }
 }
 #ifdef ENABLE_BLE
-int getConnectedRemoteControls()
-{
-  return g_remoteControls.getConnectedClientsCount();
-}
 
 bool hasBLEStarted(){
   return g_remoteControls.IsStarted();
@@ -374,10 +370,7 @@ bool isElementIdConnected(int id)
 {
   return g_remoteControls.isElementIdConnected(id);
 }
-void beginScanning()
-{
-  g_remoteControls.beginScanning();
-}
+
 void setMaximumControls(int id)
 {
   g_remoteControls.setMaximumControls(id);
@@ -550,12 +543,18 @@ void LuaInterface::RegisterMethods()
   m_lua->FuncRegister("startBLE", startBLE);
   m_lua->FuncRegister("hasBLEStarted", hasBLEStarted);
   m_lua->FuncRegister("startBLERadio", beginRadio);
-  m_lua->FuncRegister("getConnectedRemoteControls", getConnectedRemoteControls);
+
   m_lua->FuncRegister("isElementIdConnected", isElementIdConnected);
-  m_lua->FuncRegister("beginBleScanning", beginScanning);
+
   m_lua->FuncRegister("setMaximumControls", setMaximumControls);
   m_lua->FuncRegister("setLogDiscoveredBleDevices", setLogDiscoveredBle);
   m_lua->FuncRegister("getClientIdFromControllerId", getClientIdFromControllerId);
+
+  m_lua->FuncRegisterFromObjectOpt("requestClearBleResults", &g_remoteControls, &BleManager::requestClearResults);
+  m_lua->FuncRegisterFromObjectOpt("getConnectedClientsCount", &g_remoteControls, &BleManager::getConnectedClientsCount);
+  m_lua->FuncRegisterFromObjectOpt("beginBleScanning", &g_remoteControls, &BleManager::beginScanning);
+  m_lua->FuncRegisterFromObjectOpt("stopBleScanning", &g_remoteControls, &BleManager::stopScanning);
+
 
   m_lua->FuncRegisterFromObjectOpt("getRRSI", &g_remoteControls, &BleManager::GetRSSI);
   m_lua->FuncRegisterFromObjectOpt("setScanModeByAddress", &g_remoteControls, &BleManager::SetScanModeByAddress);
