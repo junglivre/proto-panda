@@ -63,8 +63,36 @@ local shaderNames = {
     [SHADER_TEXTURE] = 'TEXTURE',
 }
 
+local function drawCenteredText(text, boxX, boxW, y, fontSize)
+    fontSize = fontSize or 1
+    local charWidth = 6 * fontSize
+    local textWidth = #text * charWidth
+    local x = boxX + math.floor((boxW - textWidth) / 2)
+    oledSetCursor(x, y)
+    oledDrawText(text)
+end
+
+function _M.drawPairingBox(title, subtitle)
+    local boxW = math.floor(OLED_SCREEN_WIDTH * 0.9)
+    local boxH = math.floor(OLED_SCREEN_HEIGHT * 0.8)
+    local boxX = math.floor((OLED_SCREEN_WIDTH - boxW) / 2)
+    local boxY = math.floor((OLED_SCREEN_HEIGHT - boxH) / 2)
+    oledDrawFilledRect(boxX, boxY, boxW, boxH, 0)
+    oledDrawRect(boxX, boxY, boxW, boxH, 1)
+
+    oledSetFontSize(1)
+    local titleY = boxY + math.floor(boxH / 2) - 10
+    local subtitleY = titleY + 12
+
+    drawCenteredText(title, boxX, boxW, titleY, 1)
+    drawCenteredText(subtitle, boxX, boxW, subtitleY, 1)
+end
+
 function _M.setup(expressions)
     local overlays = require("overlays")
+
+    _M.editbutton_state = digitalRead(EDIT_MODE_PIN)
+    
     
     local cfg = configloader.Get()
 
@@ -359,6 +387,17 @@ function _M.draw(dt)
 
         oledFaceToScreen(0, 0) 
         _M.DrawBottomBar()
+
+        if drivers.pairing_mode then
+            _M.drawPairingBox("Waiting", "controller")
+            oledDisplay()
+            return
+        elseif drivers.last_connection and drivers.last_connection > millis() - 1000 then
+            _M.drawPairingBox(drivers.last_action, (drivers.last_name or "?") )
+            oledDisplay()
+            return
+        end
+        
         oledDisplay()
     elseif _M.mode == MODE_FACE_QUICK then
         local id = expressions.GetCurrentExpressionId()
@@ -605,6 +644,29 @@ function _M.DrawBottomBar()
 end
 
 function _M.handleMenu(dt)
+
+    local mode = digitalRead(EDIT_MODE_PIN)
+    if _M.editbutton_state ~= mode then  
+        if mode == 1 then
+            _M.readyToPairCount = false
+            if not _M.manualPairing and configloader.Get().edit_mode_cycle_animation == true then  
+                expressions.Next()
+                log("Internal button pressed. Cycle animation")
+            end
+        else
+            _M.readyToPairCount = true
+        end
+        _M.holdTimer = millis()+2000
+        _M.manualPairing = false
+        _M.editbutton_state = mode
+    end
+    if _M.readyToPairCount and mode == 0 and _M.holdTimer < millis() then  
+        if getConnectedClientsCount() < drivers.maxClients then
+            _M.holdTimer = 999999999
+            drivers.beginPairing()
+            _M.manualPairing = true
+        end
+    end
 
     if _M.mode == MODE_MAIN_MENU then 
         _M.handleMainMenu(dt)

@@ -36,6 +36,8 @@ local drivers = {
     loaded = {},
     core = {},
 
+    last_connection = 0,
+
 
     JOSYTICK_BUTTONS_MAP = {
         [1] = 1, --B
@@ -63,9 +65,11 @@ function drivers.Start(maxClients)
             wheel=0,
             buttons={0,0,0,0,0,0,0,0}
         }
+
         drivers.keyboard[i] = {
             button = 0
         }
+
         drivers.joystick[i] = {  
             buttons = {},   
             left_hat = 0, 
@@ -75,6 +79,7 @@ function drivers.Start(maxClients)
             right_analog_x = 0,
             right_analog_y = 0,
         }
+
         for __,b in pairs(drivers.JOSYTICK_BUTTONS_MAP) do  
             drivers.joystick[i].buttons[b] =0
         end
@@ -138,6 +143,21 @@ function drivers.EnableDrivers(input)
     end
 end
 
+
+function drivers.beginPairing()
+    log("Pairing started")
+    setScanModeByAddress(false)
+    requestClearBleResults()
+    drivers.pairing_mode=true
+end
+
+
+function drivers.stopPairing()
+    log("Pairing stopped")
+    setScanModeByAddress(true)
+    drivers.pairing_mode=false
+end
+
 function drivers.WrapUp()
     for i,b in pairs(drivers.loaded) do  
         if b.onEnable and not b.onEnable() then  
@@ -148,29 +168,39 @@ function drivers.WrapUp()
         end
     end
 
-    local confs = configloader.Get()
-
-    if confs.input.pairController then
-        setScanModeByAddress(true)
-        print("Connect by paired only")
-        drivers.registerPaired = true
-        local pairedRaw = dictGet("paired_data")
-        if pairedRaw ~= "" then  
-            local pairedData = json.decode(pairedRaw)
-            drivers.paired_data = pairedData
-            for driverName, devices in pairs(pairedData) do  
-                local drv = drivers.loaded[driverName]
-                if drv then  
-                    for addr, __ in pairs(devices) do
-                        drv.handler:AddPairedDeviceAddress(addr)
+    if hasBLEStarted() then
+        local confs = configloader.Get()
+        if confs.input.pairController then
+            log("Connect by paired only")
+            setScanModeByAddress(false)
+            drivers.registerPaired = true
+            local pairedRaw = dictGet("paired_data") or {}
+            if pairedRaw ~= "" then  
+                local pairedData = json.decode(pairedRaw)
+                drivers.paired_data = pairedData
+                local count = 0
+                for driverName, devices in pairs(pairedData) do  
+                    local drv = drivers.loaded[driverName]
+                    if drv then  
+                        for addr, __ in pairs(devices) do
+                            count = count +1
+                            drv.handler:AddPairedDeviceAddress(addr)
+                        end
                     end
                 end
+                log("Total of "..count.." devices to be connected!")
+                if count == 0 then  
+                    drivers.beginPairing()
+                end
+            else 
+                log("No paired devices registered")
+                drivers.beginPairing()
             end
-        else 
+        else  
+            drivers.pairing_mode=false
+            --Were not pairing, just connecting on ANY device avaliable
             setScanModeByAddress(false)
         end
-    else  
-        setScanModeByAddress(false)
     end
 end
 
@@ -196,6 +226,13 @@ end
 
 function drivers.DisconnectDevice(controllerId, driverName)
     drivers.type_by_id[controllerId] = nil
+
+    drivers.last_connection = millis()
+    drivers.last_action = "Disconnected"
+    drivers.last_name = driverName
+    if drivers.registerPaired then
+        beginScanning()
+    end
 end
 
 function drivers.ConnectDevice(controllerId, address, driverName)
@@ -206,6 +243,10 @@ function drivers.ConnectDevice(controllerId, address, driverName)
         error("No driver named '"..driverName.."'")
         return nil
     end
+
+    drivers.last_connection = millis()
+    drivers.last_action = "Connected"
+    drivers.last_name = driverName
 
     drivers.type_by_id[controllerId] = driverHandle
     --If is pairing mode, then we should check if this is a new device, if so, we save it!
@@ -218,8 +259,10 @@ function drivers.ConnectDevice(controllerId, address, driverName)
             obj[address] = true
             driverHandle.handler:AddPairedDeviceAddress(address)
             dictSet("paired_data", json.encode(drivers.paired_data))
+            dictSave()
         end
-        setScanModeByAddress(true)
+        drivers.stopPairing()
+        stopBleScanning()
     end
     return true
 end 
