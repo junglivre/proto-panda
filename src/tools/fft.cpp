@@ -106,11 +106,23 @@ bool FFT::begin(int gpio, int samples, int samplingFreq, int noiseThreshold, int
 
     dsps_wind_hann_f32(m_window, m_samples);
 
+
     const int MAX_BIN = m_samples / 2;
-    for (int i = 0; i < MAX_BIN; i++) {
-        if (i < 2) { m_binToBand[i] = -1; continue; }
-        int band = (int)((log((float)i) - log(2.0f)) / (log((float)MAX_BIN) - log(2.0f)) * m_bandCount);
-        m_binToBand[i] = constrain(band, 0, m_bandCount - 1);
+    for (int i = 0; i < MAX_BIN; i++) m_binToBand[i] = -1;
+
+    const float logMin   = log(2.0f);
+    const float logRange = log((float)MAX_BIN) - logMin;
+
+    int lastHi = 2; // bins 0 and 1 are always excluded (DC / near-DC)
+    for (int b = 0; b < m_bandCount; b++) {
+        float t1 = (float)(b + 1) / (float)m_bandCount;
+        int hi = (int)roundf(exp(t1 * logRange + logMin));
+        hi = constrain(hi, lastHi + 1, MAX_BIN);
+
+        for (int i = lastHi; i < hi && i < MAX_BIN; i++) {
+            m_binToBand[i] = b;
+        }
+        lastHi = hi;
     }
 
     adc_continuous_handle_cfg_t adc_config = {
