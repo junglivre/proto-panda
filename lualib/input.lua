@@ -39,9 +39,10 @@ _G.BUTTON_DOWN = 2
 _G.BUTTON_RIGHT = 3
 _G.BUTTON_UP = 4
 _G.BUTTON_CONFIRM = 5
-_G.BUTTON_AUX_A = 6
-_G.BUTTON_AUX_B = 7
-_G.BUTTON_BACK = 8
+_G.BUTTON_BACK = 6
+_G.BUTTON_AUX_A = 7
+_G.BUTTON_AUX_B = 8
+
 
 function input.parseInputLocation(str)
     local idx = 1
@@ -138,9 +139,10 @@ function input.setupControls(maxN)
         _G['DEVICE_'..i..'_BUTTON_BACK']    = _G.BUTTON_BACK        + i * MAX_BLE_BUTTONS
         _G['DEVICE_'..i..'_BUTTON_AUX_A']   = _G.BUTTON_AUX_A       + i * MAX_BLE_BUTTONS
         _G['DEVICE_'..i..'_BUTTON_AUX_B']   = _G.BUTTON_AUX_B       + i * MAX_BLE_BUTTONS
+        
 
-        _G['DEVICE_'..i..'_BUTTON_FIRST']   = _G.BUTTON_LEFT        + i * MAX_BLE_BUTTONS
-        _G['DEVICE_'..i..'_BUTTON_LAST']    = _G.BUTTON_BACK        + i * MAX_BLE_BUTTONS
+        _G['DEVICE_'..i..'_BUTTON_FIRST']   = _G.BUTTON_LEFT        + i * MAX_BLE_BUTTONS   
+        _G['DEVICE_'..i..'_BUTTON_LAST']    = _G.BUTTON_AUX_B       + i * MAX_BLE_BUTTONS
     end
 end
 
