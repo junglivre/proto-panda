@@ -216,15 +216,18 @@ MultiReturn<std::vector<std::string>> BleServiceHandler::GetCharacteristicsFromS
 
 }
 
+void BleServiceHandler::AddPairedDeviceAddress(std::string addr){
+    g_remoteControls.AddPairedDeviceAddress(addr, this);
+    Logger::Info("Accepting paired device addr %s", addr);
+}
+
 bool BleServiceHandler::WriteToCharacteristics(std::vector<uint8_t> bytes, int clientId, std::string charName, bool reply){
     NimBLEUUID charId(charName);
 
     if (charId == NimBLEUUID()){
         Logger::Error("uuid provided '%s' is invalid.", charName.c_str());
         return false;
-    } 
-
-    
+    }  
 
     BluetoothDeviceHandler *dev = nullptr;
     xSemaphoreTake(queueMutex, portMAX_DELAY);

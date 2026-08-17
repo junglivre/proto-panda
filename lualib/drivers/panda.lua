@@ -78,30 +78,24 @@ end
 
 function panda.onDisconnectPanda(connectionId, controllerId, reason)
     log("Disconnected "..connectionId.." due ".. reason)
-    drivers.type_by_id[controllerId] = nil
+    drivers.DisconnectDevice(controllerId, 'panda')
 end
 
 function panda.onConnectPanda(connectionId, controllerId, address, name)
-    drivers.type_by_id[controllerId] = panda
+    drivers.ConnectDevice(controllerId, address, "panda")
     log("Connected protopanda hand controller "..address.." "..tostring(name)..' this controller will be the '..controllerId)
-    panda.handlerPanda:WriteToCharacteristics({0,0,0,controllerId}, connectionId, "d4d3fafb-c4c1-c2c3-b4b3-b2b1a4a3a2a1", true)
+    panda.handler:WriteToCharacteristics({0,0,0,controllerId}, connectionId, "d4d3fafb-c4c1-c2c3-b4b3-b2b1a4a3a2a1", true)
 end
 
 
 function panda.onEnable()
-    if not versions.canRun("2.0.0") then  
-        --Legacy controller
-        setMaximumControls(2)
-        acceptBLETypes("d4d31337-c4c1-c2c3-b4b3-b2b1a4a3a2a1", "afaf", "fafb")
-        return false
-    end
     if not hasBLEStarted() then
         return false
     end
-    panda.handlerPanda = BleServiceHandler("d4d31337-c4c1-c2c3-b4b3-b2b1a4a3a2a1")
-    panda.handlerPanda:SetOnConnectCallback(panda.onConnectPanda)
-    panda.handlerPanda:SetOnDisconnectCallback(panda.onDisconnectPanda)
-    panda.pandaListener = panda.handlerPanda:AddCharacteristics("d4d3afaf-c4c1-c2c3-b4b3-b2b1a4a3a2a1")
+    panda.handler = BleServiceHandler("d4d31337-c4c1-c2c3-b4b3-b2b1a4a3a2a1")
+    panda.handler:SetOnConnectCallback(panda.onConnectPanda)
+    panda.handler:SetOnDisconnectCallback(panda.onDisconnectPanda)
+    panda.pandaListener = panda.handler:AddCharacteristics("d4d3afaf-c4c1-c2c3-b4b3-b2b1a4a3a2a1")
     panda.pandaListener:SetSubscribeCallback(panda.onSubscribeMessagePanda)
     panda.pandaListener:SetCallbackModeStream(true)
     return true

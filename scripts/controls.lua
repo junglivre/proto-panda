@@ -5,6 +5,7 @@ local _M = {
 
 local map = require("generic").map
 local input = require("input")
+local drivers = require("drivers")
 
 -- Draws a 5-bar signal strength indicator (weakest at top, strongest at bottom)
 local function drawSignalStrength(x, y, rssi)
@@ -38,7 +39,7 @@ function _M.onLoop(dt)
 	clearPanelBuffer()
 	oledClearScreen()
 
-	local maxN = input.maxControls
+	local maxN = drivers.maxClients
 	if maxN < 1 then maxN = 1 end
 
 	-- Refresh RSSI for connected devices every 5 seconds

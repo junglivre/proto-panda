@@ -4,6 +4,7 @@
     "mode": "BLE",
     "//comment1": "'enableHidControllers' allows for generic controllers like BLE HID devices to connect with protopanda. Support is limited",
     "enableHidControllers": false,
+    "pairController": true,
     "maxBleDevices": 1,
     "drivers": ["panda", "BLE-M3", "beauty-r1"]
   },
@@ -34,6 +35,8 @@
     "panda.buttons.4": "BUTTON_UP",
     "panda.buttons.5": "BUTTON_CONFIRM",
     "panda.buttons.6": "BUTTON_BACK",
+    "panda.buttons.7": "BUTTON_AUX_A",
+    "panda.buttons.8": "BUTTON_AUX_B",
     "joystick.right_hat=5": "BUTTON_LEFT",
     "joystick.right_hat=3": "BUTTON_DOWN",
     "joystick.right_hat=1": "BUTTON_RIGHT",

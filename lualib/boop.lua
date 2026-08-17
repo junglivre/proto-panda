@@ -61,7 +61,7 @@ function _M.Load()
             error("Boop mode gpio is enabled. The field 'power_gpio' is is not a number")
         end
 
-        pinMode(_M.config["gpio"], INPUT)
+        pinMode(_M.config["gpio"], INPUT_PULLDOWN)
         _M.gpio = _M.config["gpio"]
         _M.gpio_state = _M.config["gpio_state"]
         _M.power_gpio = tonumber(_M.config["power_gpio"])

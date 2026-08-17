@@ -18,7 +18,7 @@
         "samples": 512,
         "sampling_frequency": 44100,
         "noise_threshold": 5500,
-        "band_count": 16,
+        "band_count": 32,
         "speech_band_start": 2,
         "speech_band_end":  8,
         "speech_min_energy": 50000,

@@ -7,3 +7,11 @@ build/*
 .vscode
 remote-control/Output/
 remote-control/*.emSession
+*.elf
+*.hex
+*.d
+*.o
+*.map
+*.ind
+*.ld
+*.emSession

@@ -63,6 +63,20 @@ local NOISE_STEP  = 500
 local ENERGY_STEP = 5000
 local FRIST_STEP = 500
 
+
+local SCREEN_WIDTH = 128
+
+local function bandX(i, count)
+	return math.floor((i - 1) * (SCREEN_WIDTH / count))
+end
+
+local function bandBarWidth(count)
+	local step = SCREEN_WIDTH / count
+	local w = math.floor(step) - 1
+	if w < 1 then w = 1 end
+	return w
+end
+
 function _M.resetDefaults()
 
 
@@ -343,6 +357,7 @@ function _M.CalibrateDraw(dt)
 	if _M.state == CALIB_STATE_NOISE then
 		local count = getBandCountFft()
 		local avg = 0
+		local barWidth = bandBarWidth(count)
 		for i = 1, count do
 			local v = getBandValueFft(i)
 			_M.maxBandInput = math.max(v, _M.maxBandInput)
@@ -351,7 +366,7 @@ function _M.CalibrateDraw(dt)
 			_M.noiseBandValues[i] = updateEnvelope(_M.noiseBandValues[i] or 0, v)
 
 			local mapped = Map(v, 0, _M.maxBandInput * 1.1, 0, 64)
-			oledDrawFilledRect(i * 5, 0, 4, math.ceil(mapped), 1)
+			oledDrawFilledRect(bandX(i, count), 0, barWidth, math.ceil(mapped), 1)
 		end
 		avg = avg / count
 
@@ -364,6 +379,7 @@ function _M.CalibrateDraw(dt)
 
 	elseif _M.state == CALIB_STATE_TALK then
 		local count = getBandCountFft()
+		local barWidth = bandBarWidth(count)
 		local bandValues = {}
 		local bandActive = {}
 
@@ -374,7 +390,7 @@ function _M.CalibrateDraw(dt)
 			_M.talkEnvelope[i] = updateEnvelope(_M.talkEnvelope[i] or 0, v)
 
 			local mapped = Map(v, 0, _M.maxBandInput * 1.1, 0, 64)
-			oledDrawFilledRect(i * 5, 0, 4, math.ceil(mapped), 1)
+			oledDrawFilledRect(bandX(i, count), 0, barWidth, math.ceil(mapped), 1)
 
 			local bandThreshold = (_M.noiseBandValues[i] or 0) * NOISE_ACTIVE_MULT + NOISE_ACTIVE_MARGIN
 			bandActive[i] = _M.talkEnvelope[i] > bandThreshold
@@ -413,8 +429,8 @@ function _M.CalibrateDraw(dt)
 		end
 
 		if _M.bandStart then
-			oledDrawFastVLine(_M.bandStart * 5, 0, 64, 1)
-			oledDrawFastVLine(_M.bandEnd * 5, 0, 64, 1)
+			oledDrawFastVLine(bandX(_M.bandStart, count), 0, 64, 1)
+			oledDrawFastVLine(bandX(_M.bandEnd, count), 0, 64, 1)
 
 			local sumEnergy = 0
 			local noiseEnergy = 0
@@ -481,6 +497,7 @@ function _M.CalibrateDraw(dt)
 
 	elseif _M.state == CALIB_STATE_ADJ_FRIST then
 		local count = getBandCountFft()
+		local barWidth = bandBarWidth(count)
 		
 		-- Use max_energy as the max for the Map function
 		local maxVal = _M.max_energy * 1.2
@@ -488,7 +505,7 @@ function _M.CalibrateDraw(dt)
 		for i = 1, count do
 			local v = getBandValueFft(i)
 			local mapped = Map(v, 0, maxVal, 0, 28)
-			oledDrawFilledRect(i * 5, 0, 4, math.ceil(mapped), 1)
+			oledDrawFilledRect(bandX(i, count), 0, barWidth, math.ceil(mapped), 1)
 		end
 		
 		-- Show the current frame threshold as a horizontal line
@@ -498,8 +515,8 @@ function _M.CalibrateDraw(dt)
 		local level = _M.getSpeechLevel(dt, nil, nil, 5)
 		drawLevelBoxes(level, 5, 12, 30)
 
-		oledDrawFastVLine(_M.band_start * 5, 0, 28, 1)
-		oledDrawFastVLine(_M.band_end * 5, 0, 28, 1)
+		oledDrawFastVLine(bandX(_M.band_start, count), 0, 28, 1)
+		oledDrawFastVLine(bandX(_M.band_end, count), 0, 28, 1)
 
 		oledSetCursor(0, 44)
 		oledDrawText("Frame thresh: " .. math.floor(_M.frist_frame_threshold))
@@ -508,6 +525,7 @@ function _M.CalibrateDraw(dt)
 
 	elseif _M.state == CALIB_STATE_ADJ_NOISE then
 		local count = getBandCountFft()
+		local barWidth = bandBarWidth(count)
 		
 		-- Use max_energy as the max for the Map function
 		local maxVal = _M.max_energy * 1.2
@@ -515,7 +533,7 @@ function _M.CalibrateDraw(dt)
 		for i = 1, count do
 			local v = getBandValueFft(i)
 			local mapped = Map(v, 0, maxVal, 0, 64)
-			oledDrawFilledRect(i * 5, 0, 4, math.ceil(mapped), 1)
+			oledDrawFilledRect(bandX(i, count), 0, barWidth, math.ceil(mapped), 1)
 		end
 		
 		local thresholdY = Map(_M.noise_threshold, 0, maxVal, 0, 64)
@@ -528,6 +546,7 @@ function _M.CalibrateDraw(dt)
 
 	elseif _M.state == CALIB_STATE_ADJ_MIN then
 		local count = getBandCountFft()
+		local barWidth = bandBarWidth(count)
 		
 		-- Use max_energy as the max for the Map function
 		local maxVal = _M.max_energy * 1.2
@@ -535,11 +554,11 @@ function _M.CalibrateDraw(dt)
 		for i = 1, count do
 			local v = getBandValueFft(i)
 			local mapped = Map(v, 0, maxVal, 0, 28)
-			oledDrawFilledRect(i * 5, 0, 4, math.ceil(mapped), 1)
+			oledDrawFilledRect(bandX(i, count), 0, barWidth, math.ceil(mapped), 1)
 		end
 
-		oledDrawFastVLine(_M.band_start * 5, 0, 28, 1)
-		oledDrawFastVLine(_M.band_end * 5, 0, 28, 1)
+		oledDrawFastVLine(bandX(_M.band_start, count), 0, 28, 1)
+		oledDrawFastVLine(bandX(_M.band_end, count), 0, 28, 1)
 		
 		-- Show min_energy as a horizontal line
 		local minY = Map(_M.min_energy, 0, maxVal, 0, 28)
@@ -561,6 +580,7 @@ function _M.CalibrateDraw(dt)
 
 	elseif _M.state == CALIB_STATE_ADJ_MAX then
 		local count = getBandCountFft()
+		local barWidth = bandBarWidth(count)
 		
 		-- Use max_energy as the max for the Map function
 		local maxVal = _M.max_energy * 1.2
@@ -568,7 +588,7 @@ function _M.CalibrateDraw(dt)
 		for i = 1, count do
 			local v = getBandValueFft(i)
 			local mapped = Map(v, 0, maxVal, 0, 28)
-			oledDrawFilledRect(i * 5, 0, 4, math.ceil(mapped), 1)
+			oledDrawFilledRect(bandX(i, count), 0, barWidth, math.ceil(mapped), 1)
 		end
 		
 		-- Show max_energy as a horizontal line
@@ -578,8 +598,8 @@ function _M.CalibrateDraw(dt)
 		local level = _M.getSpeechLevel(dt, nil, nil, 5)
 		drawLevelBoxes(level, 5, 12, 30)
 
-		oledDrawFastVLine(_M.band_start * 5, 0, 28, 1)
-		oledDrawFastVLine(_M.band_end * 5, 0, 28, 1)
+		oledDrawFastVLine(bandX(_M.band_start, count), 0, 28, 1)
+		oledDrawFastVLine(bandX(_M.band_end, count), 0, 28, 1)
 
 		oledSetCursor(0, 44)
 		oledDrawText("Max energy: " .. math.floor(_M.max_energy))
@@ -588,6 +608,7 @@ function _M.CalibrateDraw(dt)
 
 	elseif _M.state == CALIB_STATE_ADJ_BANDEND then
 		local count = getBandCountFft()
+		local barWidth = bandBarWidth(count)
 		
 		-- Use max_energy as the max for the Map function
 		local maxVal = _M.max_energy * 1.2
@@ -595,13 +616,13 @@ function _M.CalibrateDraw(dt)
 		for i = 1, count do
 			local v = getBandValueFft(i)
 			local mapped = Map(v, 0, maxVal, 0, 28)
-			oledDrawFilledRect(i * 5, 0, 4, math.ceil(mapped), 1)
+			oledDrawFilledRect(bandX(i, count), 0, barWidth, math.ceil(mapped), 1)
 		end
 		local minEn = Map(_M.min_energy, 0, maxVal, 0, 28)
 		oledDrawFastHLine(0, minEn, 128, 1)
 
-		oledDrawFastVLine(_M.band_start * 5, 0, 28, 1)
-		oledDrawFastVLine(_M.band_end * 5, 0, 28, 1)
+		oledDrawFastVLine(bandX(_M.band_start, count), 0, 28, 1)
+		oledDrawFastVLine(bandX(_M.band_end, count), 0, 28, 1)
 		_M.calibrating = true
 		local level = _M.getSpeechLevel(dt, nil, nil, 5)
 		drawLevelBoxes(level, 5, 12, 30)
@@ -612,6 +633,7 @@ function _M.CalibrateDraw(dt)
 		oledDrawText("UP/DN +-1 CONFIRM=save")
 	elseif _M.state == CALIB_STATE_ADJ_BANDSTART then
 		local count = getBandCountFft()
+		local barWidth = bandBarWidth(count)
 		
 		-- Use max_energy as the max for the Map function
 		local maxVal = _M.max_energy * 1.2
@@ -619,14 +641,14 @@ function _M.CalibrateDraw(dt)
 		for i = 1, count do
 			local v = getBandValueFft(i)
 			local mapped = Map(v, 0, maxVal, 0, 28)
-			oledDrawFilledRect(i * 5, 0, 4, math.ceil(mapped), 1)
+			oledDrawFilledRect(bandX(i, count), 0, barWidth, math.ceil(mapped), 1)
 		end
 
 		local minEn = Map(_M.min_energy, 0, maxVal, 0, 28)
 		oledDrawFastHLine(0, minEn, 128, 1)
 
-		oledDrawFastVLine(_M.band_start * 5, 0, 28, 1)
-		oledDrawFastVLine(_M.band_end * 5, 0, 28, 1)
+		oledDrawFastVLine(bandX(_M.band_start, count), 0, 28, 1)
+		oledDrawFastVLine(bandX(_M.band_end, count), 0, 28, 1)
 		_M.calibrating = true
 		local level = _M.getSpeechLevel(dt, nil, nil, 5)
 		drawLevelBoxes(level, 5, 12, 30)

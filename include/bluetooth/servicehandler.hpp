@@ -45,15 +45,16 @@ class BleServiceHandler{
   public:
     BleServiceHandler(NimBLEUUID u):uuid(u),queueMutex(xSemaphoreCreateMutex()),luaOnConnectCallback(nullptr),luaOnDisconnectCallback(nullptr){};
     BleCharacteristicsHandler* AddCharacteristics(std::string uuid);
+
+    void AddPairedDeviceAddress(std::string addr);
+
     void SetOnConnectCallback(LuaFunctionCallback * cb){
       luaOnConnectCallback = cb;
     }
     void SetOnDisconnectCallback(LuaFunctionCallback * cb){
       luaOnDisconnectCallback = cb;
     }
-    void AddAddressRequired(std::string addr){
-      addrMap[addr] = true;
-    };
+
     void AddNameRequired(std::string namer){
       nameMap[namer] = true;
     };
@@ -76,6 +77,7 @@ class BleServiceHandler{
     
   private: 
     friend AdvertisedDeviceCallbacks;
+    friend BleManager;
     SemaphoreHandle_t queueMutex;
     std::stack<BluetoothDeviceHandler*> devicesToNotify;
     std::stack<DisconnectTuple> devicesToDisconnectNotify;

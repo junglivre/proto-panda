@@ -103,15 +103,6 @@ function _M.loadSingleExpression(data, filename, i)
 end
 
 function _M.update()
-	local mode = digitalRead(EDIT_MODE_PIN)
-	if _M.editbutton_state ~= mode then  
-		if mode == 0 and configloader.Get().edit_mode_cycle_animation == true then  
-			_M.Next()
-			log("Internal button pressed. Cycle animation")
-		end
-		_M.editbutton_state = mode
-	end
-
 	local id = getCurrentAnimationStorage()
 	if id ~= 0 then
 		local aux = _M.pendingEnter[id]
