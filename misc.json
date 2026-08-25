@@ -14,7 +14,7 @@
         "transictionInOnlyOnSpecificFrame": 1
     },
     "fft": {
-        "gpio": 1,
+        "gpio": 3,
         "samples": 512,
         "sampling_frequency": 44100,
         "noise_threshold": 5500,

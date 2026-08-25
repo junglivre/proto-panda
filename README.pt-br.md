@@ -9,17 +9,19 @@
 Protopanda é uma plataforma open source (firmware e hardware) para controlar protogens. A ideia é ser simples o suficiente para que você só precise de um pouco de conhecimento técnico para fazê-lo funcionar, mas ao mesmo tempo flexível para que uma pessoa com o mínimo conhecimento de Lua possa fazer quase de tudo.
 
 1. [Features](#features)   
-2. [Guides](#guias)   
-3. [Alimentação](#alimentação)  
-4. [Painéis](#painéis)  
-5. [Tela e Expressões](#tela-e-expressões)  
-6. [Compilando o firmware](./doc/flashing-guide.pt-br.md)
-7. [Fitas de LED](#fitas-de-led)  
-8. [Bluetooth](#bluetooth)  
-9. [Hardware](#hardware)   
-10. [Montando os eletronicos](#montando-o-seu-protopanda)
-11. [Imprimindo e montando as peças](./doc/print-guide.pt-br.md)
-12. [Programação em Lua](#programação-em-lua)  
+2. [Modelos 3d](#modelos-3d)
+3. [Guias](#guias)   
+4. [FAQ](#faq)   
+5. [Alimentação](#alimentação)  
+6. [Painéis](#painéis)  
+7. [Tela e Expressões](#tela-e-expressões)  
+8. [Compilando o firmware](./doc/flashing-guide.pt-br.md)
+9. [Fitas de LED](#fitas-de-led)  
+10. [Bluetooth](#bluetooth)  
+11. [Hardware](#hardware)   
+12. [Montando os eletronicos](#montando-o-seu-protopanda)
+13. [Imprimindo e montando as peças](./doc/print-guide.pt-br.md)
+14. [Programação em Lua](#programação-em-lua)  
 
 # Features
 
@@ -41,17 +43,26 @@ Protopanda é uma plataforma open source (firmware e hardware) para controlar pr
 - Tem jogos!
 - gay 🏳️‍🌈
 
+# Modelos 3d
+
+Todos os modelos 3D estão no thingiverse. **IMPORTANTE: o frame frontal está em uma página separada**
+**Head:** https://www.thingiverse.com/thing:7188042
+**Front frame:** https://www.thingiverse.com/thing:7188045
+
 # Guias
 
 Tem vários guias prontos com imagens e tudo! 
 
 * [Guia de impressão e montagem das peças em 3d](./doc/print-guide.pt-br.md)
 * [Fazendo um protopanda do 0 (DIY)](./doc/diy-guide.pt-br.md)
-* [Atualizando o firmware e compilando](./doc/flashing-guide.pt-br.md)
 * [Montando oss eletronicos no painel frontal](./doc/front-frame-guide.pt-br.md)
+* [Atualizando o firmware e compilando](./doc/flashing-guide.pt-br.md)
+* [Configurando seu protogen](./doc/configuring.pt-br.md)
 * [Referencia de funções lua](doc/lua-doc.pt-br.md)
 
+# FAQ
 
+[Dê uma olhada no FAQ aqui](./doc/faq.pt-br.md)
 
 # Alimentação  
 

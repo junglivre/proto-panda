@@ -12,7 +12,9 @@ Protopanda is an open source patform (firmware and hardware), for controling pro
 **Telegram chat:** https://t.me/protopandachat
 
 1. [Features](#features)
-2. [Guides](#guides)
+2. [3D Models](#3d-models)
+3. [Guides](#guides)   
+4. [FAQ](#faq)   
 3. [Powering](#powering)
 4. [Panels](#panels)
 5. [Face and Expressions](#face-and-expressions)
@@ -44,16 +46,29 @@ Protopanda is an open source patform (firmware and hardware), for controling pro
 - Has games!
 - gay 🏳️‍🌈
 
+# 3D models
+
+All 3d models are in thingiverse. **Note that the front frame is in a different page!**
+**Head:** https://www.thingiverse.com/thing:7188042
+**Front frame:** https://www.thingiverse.com/thing:7188045
+
+[Check the FAQ here](./doc/faq.md)
+
 # Guides
+
 
 There are several guides with images and all!
 
 * [Printing and aassembling guide](./doc/print-guide.md)
 * [Building your own protopanda (DIY)](./doc/diy-guide.md)
-* [Flashing and compiling the firmware](./doc/flashing-guide.md)
 * [Assembling the front frame with all parts](./doc/front-frame-guide.md)
+* [Flashing and compiling the firmware](./doc/flashing-guide.md)
+* [Configuring your protogen](./doc/configuring.md)
 * [Lua function reference](doc/lua-doc.md)
 
+# FAQ
+
+[Check the FAQ here](./doc/faq.md)
 
 # Powering 
 
