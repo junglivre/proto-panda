@@ -650,13 +650,14 @@ But thats too much work right? Just point your remote to protopanda IR receiver 
 > Unmapped IR command with usercode FFBC and opcode F9
 
 There we go! You have all the data. Lets say you pressed in the order: up, down, left, right, enter, back, and you got:
-
-> Unmapped IR command with usercode FFBC and opcode F9
-> Unmapped IR command with usercode FFBC and opcode F8
-> Unmapped IR command with usercode FFBC and opcode F7
-> Unmapped IR command with usercode FFBC and opcode F6
-> Unmapped IR command with usercode FFBC and opcode F5
-> Unmapped IR command with usercode FFBC and opcode F4
+```
+Unmapped IR command with usercode FFBC and opcode F9
+Unmapped IR command with usercode FFBC and opcode F8
+Unmapped IR command with usercode FFBC and opcode F7
+Unmapped IR command with usercode FFBC and opcode F6
+Unmapped IR command with usercode FFBC and opcode F5
+Unmapped IR command with usercode FFBC and opcode F4
+```
 
 So you just do this:
 
@@ -692,3 +693,235 @@ You can even do something more complex like:
 ```
 
 That text section is just a lua code. So go crazy!
+
+# Leds
+
+Changing the side leds behavior is a matter of changing the config at `hardware.json` or coding your own pattern.
+
+## The easy way
+
+The easy way is go to the `hardware.json` and edit the `leds` section.
+Say you want to make left side red and right side purple. Then you need to do this:
+```json
+{
+    <the rest of your file>
+    "leds": { 
+        "pin_mode": "double",
+        "groups":[
+            {
+                "pin_side": "left",
+                "led_count": 64,
+                "r": 255,
+                "g": 0,
+                "b": 0,
+                "mode": "color_rgb"
+            },
+            {
+                "pin_side": "right",
+                "led_count": 64,
+                "r": 255,
+                "g": 0,
+                "b": 140,
+                "mode": "color_rgb"
+            }
+        ]
+
+    }
+}
+```
+
+Now you ask:
+"Okay, `mode: color_rgb`. What are the other modes?
+
+
+| Mode | Description | Parameters |
+|------|-------------|------------|
+| `none` | LEDs remain off | None |
+| `pride` | Rainbow pride flag animation | None |
+| `rotate` | Rotating color along the strip | `speed` (ms) - rotation speed |
+| `random_color` | Each LED flashes random colors | None |
+| `fade_cycle` | Gradual color cycling | `hue` (0-255), `speed` (ms), `min_brightness` (0-255) |
+| `rotate_fade_cycle` | Fade cycle with rotation | `hue`, `speed`, `min_brightness`, `rotate_speed` (ms) |
+| `color_rgb` | Static RGB color | `r` (0-255), `g` (0-255), `b` (0-255) |
+| `color_hsv` | Static HSV color | `h` (0-255), `s` (0-255), `v` (0-255) |
+| `random_blink` | LEDs blink randomly | `base_hue` (0-255), `hue_variance` (0-255), `brightness` (0-255), `blink_speed` (ms) |
+| `icon_x` | Display an "X" pattern | None |
+| `icon_y` | Display a "Y" pattern | None |
+| `icon_v` | Display a "V" pattern | None |
+| `rotate_sine_v` | Sine wave brightness variation | `hue` (0-255), `saturation` (0-255), `speed` (ms) |
+| `rotate_sine_s` | Sine wave saturation variation | `hue` (0-255), `brightness` (0-255), `speed` (ms) |
+| `rotate_sine_h` | Sine wave hue variation | `sat` (0-255), `brightness` (0-255), `speed` (ms) |
+| `fade_in` | Gradual fade-in effect | `hue` (0-255), `saturation` (0-255), `step` (0-255), `delay` (ms) |
+| `noise` | Random noise effect | `step` (0-255), `delay` (ms) |
+
+
+If your mode isn't present here, then you'll have to go the [hard way](#the-hard-way).
+
+Those are the existing modes you can use. See, if you decide to use `noise`, you dont add the parameters r,g,b, you do like this:
+```json
+{
+    <the rest of your file>
+    "leds": { 
+        "pin_mode": "double",
+        "groups":[
+            {
+                "pin_side": "left",
+                "led_count": 64,
+                "step": 5,
+                "delay": 10,
+                "mode": "noise"
+            },
+            {
+                "pin_side": "right",
+                "led_count": 64,
+                "step": 5,
+                "delay": 10,
+                "mode": "noise"
+            }
+        ]
+
+    }
+}
+```
+
+Each mode has its avaliable parameters.
+
+
+## The hard way
+
+The hard way allows you do do whatever you want. This mode you'll will basically ignore the `leds` section and code your own patterns using lua. It is preety straightforward!
+Lets learn how to do this effect:
+
+![led](configuring-led-thunder.gif)
+
+Open the init.lua file, you will see these two functions:
+```lua
+
+
+<some code here before>
+
+
+function onSetup()
+    <some code here before>
+
+    leds.begin()
+
+    < the rest of the function >
+end
+
+function onPreflight()
+    ledsSetManaged(true)
+    setPanelManaged(true)
+
+    < the rest of the function >
+
+end
+
+function onLoop(dt)
+    overlays.update(dt)
+    drivers.update()
+    input.update()
+    expressions.update()
+    if not scripts.Handle(dt) then
+        return
+    end
+    menu.handleMenu(dt)
+end
+```
+
+At the first function you will see we have a `leds.begin()` This function will basically read the json and call:
+```lua
+    --countLeft and countRight are 64 by default in the leds json
+    ledsBeginDual(countLeft, countRight, 0) 
+    <After some more code>
+    ledsSegmentBehavior(groupId, behavior, param1, param2, param3, param4)
+```
+This will set the behavior. This behavior is handled by the core that handles animation and bluetooth. But honestly, we're not using it. You can leave it unchanged, it will start the led for us. Or comment that `leds.begin` line and start the leds using `ledsBeginDual` by yourself.
+
+After that, on the second function we should replace: `ledsSetManaged(true)` to `ledsSetManaged(false)`. This will say: "Dont update the leds on the second core". This will leave the leds without even light up. And thats what we want! Nothing will change a thing on them.
+
+Now, inside the `onLoop`, this is where we going to code our behavior. Since we declared 64 leds on the left side and 64 leds on the right side, thats a total of 128 leds. That is important because from led 0 to led 63 those are the left leds. And 64 to 123 are the right leds.
+
+So lets say we want to set the first led on the left side to red and the first on the right blue?
+```lua
+ledsSetColor(0, 255, 0, 0)
+ledsSetColor(63, 0, 0, 255)
+ledsDisplay()
+```
+You can check the [lua reference here](lua-doc.md), but making it short. Its saying the led `0`, will have the color RGB `255,0,0`. We do the same for the led 63, which is the first led of the other side but we send `0,0,255`.
+And after that you send the command so the leds update their color with `ledsDisplay()`.
+We can set all segment a single color too:
+```lua
+ledsSegmentColor(0, 255, 0, 0)
+ledsSegmentColor(1, 0, 0, 255)
+ledsDisplay()
+```
+This will set left side all red and right all blue. And yes, you can do it for each led individually or all the same.
+
+So, if we do some clever coding:
+```lua
+local maxBrightDuration = 0  
+local isMaxBright = false
+local flashState = false
+local nextLightning = 0
+local flashes = 0
+
+function thunderLed(dt)
+    if isMaxBright then
+        if maxBrightDuration <= 0 then  
+            if flashes <= 0 then  
+                isMaxBright = false
+                ledsSegmentColor(0, 0, 120, 0) --Segmento direito verde metade do brilho
+                ledsSegmentColor(1, 0, 120, 0) --Segmento esquerdo verde metade do brilho
+                ledsDisplay() -- Atualiza os leds
+            else 
+                maxBrightDuration = math.random(5, 50)
+                if flashState then
+                    ledsSegmentColor(0, 0, 120, 0) --Segmento direito verde 100% do brilho
+                    ledsSegmentColor(1, 0, 120, 0) --Segmento esquerdo verde 100% do brilho
+                else 
+                    ledsSegmentColor(0, 0, 255, 0) --Segmento direito verde 100% do brilho
+                    ledsSegmentColor(1, 0, 255, 0) --Segmento esquerdo verde 100% do brilho
+                end
+                flashState = not flashState
+                ledsDisplay() -- Atualiza os leds
+            end
+            flashes = flashes -1
+        end
+        maxBrightDuration = maxBrightDuration - dt
+    else 
+        if nextLightning <= 0 then  
+            nextLightning = math.random(200, 2500)
+            maxBrightDuration = math.random(20, 50)
+            isMaxBright = true
+            flashState = true
+            if math.random(0, 1000) < 300 then 
+                flashes = math.random(0,3)*2
+            else 
+                flashes = 0
+            end
+            ledsSegmentColor(0, 0, 255, 0) --Segmento direito verde 100% do brilho
+            ledsSegmentColor(1, 0, 255, 0) --Segmento esquerdo verde 100% do brilho
+            ledsDisplay() -- Atualiza os leds
+        end
+        nextLightning = nextLightning - dt --Reduz contador
+    end
+end
+
+<the rest of your init.lua>
+
+
+function onLoop(dt)
+    thunderLed(dt)
+    overlays.update(dt)
+    drivers.update()
+    input.update()
+    expressions.update()
+    if not scripts.Handle(dt) then
+        return
+    end
+    menu.handleMenu(dt)
+end
+```
+Then the leds will do that green thunder effect!
+Now go crazy and make a sick effect!

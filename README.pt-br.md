@@ -45,7 +45,9 @@ Protopanda é uma plataforma open source (firmware e hardware) para controlar pr
 
 # Modelos 3d
 
-Todos os modelos 3D estão no thingiverse. **IMPORTANTE: o frame frontal está em uma página separada**
+Todos os modelos 3D estão no thingiverse.
+ **IMPORTANTE: o frame frontal está em uma página separada**
+ 
 **Head:** https://www.thingiverse.com/thing:7188042
 **Front frame:** https://www.thingiverse.com/thing:7188045
 

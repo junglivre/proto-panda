@@ -48,7 +48,9 @@ Protopanda is an open source patform (firmware and hardware), for controling pro
 
 # 3D models
 
-All 3d models are in thingiverse. **Note that the front frame is in a different page!**
+All 3d models are in thingiverse. 
+**Note that the front frame is in a different page!**
+
 **Head:** https://www.thingiverse.com/thing:7188042
 **Front frame:** https://www.thingiverse.com/thing:7188045
 
