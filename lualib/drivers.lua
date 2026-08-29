@@ -89,21 +89,22 @@ end
 function drivers.EnableDrivers(input)
     local driversToLoad = input.drivers
     if input.enableHidControllers then
-        local hid = {
-            mode=drivers.device_attribute_map["hid"],
-            onEnable = function()
-                if not hasBLEStarted() then
-                    return false
-                end
-                hid.handler = BleServiceHandler("00001812-0000-1000-8000-00805f9b34fb")
-                hid.handler:SetOnConnectCallback(drivers.onConnectHID)
-                hid.handler:SetOnDisconnectCallback(drivers.onDisconnectHID)
-                hid.mouseListener = drivers.handler:AddCharacteristics("2a4d")
-                hid.mouseListener:SetSubscribeCallback(drivers.onHidCallback) 
-                hid.mouseListener:SetCallbackModeStream(false)
-                return true
+        local hid = {}
+
+        hid.mode=drivers.device_attribute_map["hid"]
+        function hid.onEnable(self)
+            if not hasBLEStarted() then
+                return false
             end
-        }
+            hid.handler = BleServiceHandler("00001812-0000-1000-8000-00805f9b34fb")
+            hid.handler:SetOnConnectCallback(drivers.onConnectHID)
+            hid.handler:SetOnDisconnectCallback(drivers.onDisconnectHID)
+            hid.mouseListener = hid.handler:AddCharacteristics("2a4d")
+            hid.mouseListener:SetSubscribeCallback(drivers.onHidCallback) 
+            hid.mouseListener:SetCallbackModeStream(false)
+            return true
+        end
+        
         drivers.loaded["hid"] = hid
     end
 
@@ -122,6 +123,7 @@ function drivers.EnableDrivers(input)
                             error("Invalid mode '"..mode.."' in driver "..driverName)
                         end
                     end
+                    content.handler = drivers.loaded["hid"].handler
                     drivers.device_attribute_map[driverName] = content.mode
                 else 
                     error("No mode set for "..driverName)
@@ -160,11 +162,21 @@ end
 
 function drivers.WrapUp()
     for i,b in pairs(drivers.loaded) do  
-        if b.onEnable and not b.onEnable() then  
+        if b.onEnable and not b:onEnable() then  
             log("Failed to enable core driver "..tostring(i))
         end
         if not b.handler and b.type == 'core' then  
             error("Driver "..i.." dont have a valid handler")
+        end
+    end
+    
+    for i,b in pairs(drivers.loaded) do  
+        if not b.handler then  
+            if b.type and drivers.loaded[b.type] then  
+                b.handler = drivers.loaded[b.type].handler
+            else 
+                error("Driver "..i.." dont have a valid handler inherited")
+            end
         end
     end
 
@@ -231,7 +243,7 @@ function drivers.DisconnectDevice(controllerId, driverName)
     drivers.last_action = "Disconnected"
     drivers.last_name = driverName
     if drivers.registerPaired then
-        beginScanning()
+        beginBleScanning()
     end
 end
 

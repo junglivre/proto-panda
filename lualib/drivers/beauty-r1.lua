@@ -50,7 +50,7 @@ function beautyr1.processPackets(connectionId, controllerId, data)
 end
 
 function beautyr1.onUpdate(drivers, i)
-    if drivers.generic[i].timeout and drivers.generic[i].timeout < millis() then  
+    if drivers.generic[i] and drivers.generic[i].timeout and drivers.generic[i].timeout < millis() then  
         drivers.generic[i].timeout = nil
         local buttons = drivers.generic[i].buttons
         for a,c in pairs(buttons) do
