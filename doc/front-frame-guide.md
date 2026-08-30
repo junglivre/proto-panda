@@ -31,10 +31,10 @@ Then you will need the electronics:
 * 1x USB cable
 * 1x [0.96 inch oled screen](https://pt.aliexpress.com/item/1005006262908701.html)
 * Some cables
-* 4x M2 6mm screws
-* 4x M2 nut
-* 2x M3 16mm~18mm
-* 4~6x M3 8mm screws
+* 4x [M2 6mm screws](https://pt.aliexpress.com/item/32973784147.html)
+* 4x [M2 nut](https://pt.aliexpress.com/item/1005005139195269.html)
+* 2x [M3 16mm~18mm](https://pt.aliexpress.com/item/32973784147.html)
+* 4~6x [M3 8mm screws](https://pt.aliexpress.com/item/32973784147.html)
 * 2x [M3 nut self tapping](https://pt.aliexpress.com/item/1005008207473770.html)
 
 
@@ -43,9 +43,9 @@ Then you will need the electronics:
 ### Optionals
 
 * 2x [IDC 8x2 terminal](https://pt.aliexpress.com/item/1005007995752212.html)
-* 2x M3 nuts
-* 2x M3 8MM screws
-* 2x M3 4MM screws
+* 2x [M3 nuts](https://pt.aliexpress.com/item/1005005139195269.html)
+* 2x [M3 8MM screws](https://pt.aliexpress.com/item/32973784147.html)
+* 2x [M3 4MM screws](https://pt.aliexpress.com/item/32973784147.html)
 * [Fresnel lens](https://pt.aliexpress.com/item/1005009696060069.html)
 * [KF2510](https://pt.aliexpress.com/item/1005011814149800.html?) Get the 4 pin one.
 

@@ -44,7 +44,7 @@ Bellow you can click on each of those images. Each session has a printing guide,
 * Smooth PEI sheet for the side leds (Those with the stars make a really nice effect)
 * Orca slicer (or some slicer with similar features)
 * Soldering iron with a heatset tip
-* 4x M4 10mm screws (temporary)
+* 4x [M4 10mm screws (temporary)](https://pt.aliexpress.com/item/32973784147.html)
 * Screwdriver
 * Set of straight cutting pliers
 * C clamp (optional)
@@ -52,13 +52,13 @@ Bellow you can click on each of those images. Each session has a printing guide,
 ### All consumables required
 > Almost all parts that require screws can be glued instead. The original MK16 does that. With exception of the front frame.
 * Two component glue
-* 10x M3 heat insert (5~7mm in height)
-* 18x M3 heat insert 3mm height
-* 8x to 16x M4 heat insert (5~7mm in height)
-* 8x to 16x 10~15mm M4 flat head screws
-* 4x M3 flat head 10mm screws
-* 12x to 18x M3 6mm screws
-* 2x 10mmX2mm neodimium magnet
+* 10x M3 [heat insert (5~7mm in height)](https://pt.aliexpress.com/item/1005003582355741.html)
+* 18x M3 [heat insert 3mm height](https://pt.aliexpress.com/item/1005003582355741.html)
+* 8x to [16x M4 heat insert (5~7mm in height)](https://pt.aliexpress.com/item/1005003582355741.html)
+* 8x to 16x 10~15mm M4 [flat head screws](https://pt.aliexpress.com/item/32973784147.html)
+* 4x [M3 flat head 10mm screws](https://pt.aliexpress.com/item/32973784147.html)
+* 12x to 18x [M3 6mm screws](https://pt.aliexpress.com/item/32973784147.html)
+* 2x [10mmX2mm neodimium magnet](https://pt.aliexpress.com/item/1005011876332886.html)
 * PETG, ASA and TPU
 * Transparent PLA
 * Black PLA

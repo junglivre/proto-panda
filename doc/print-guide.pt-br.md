@@ -43,7 +43,7 @@ Abaixo você pode clicar em cada uma das imagens. Cada seção tem um guia de im
 * Placa lisa de PEI para os LEDs laterais (Se tiver aquela com as estrelas fica muito top)
 * Orca slicer (ou outro fatiador com recursos parecidos)
 * Ferro de solda com ponta para inserto de latão
-* 4x parafusos M4 10mm (temporários)
+* 4x [parafusos M4 10mm (temporários)](https://pt.aliexpress.com/item/32973784147.html)
 * Chave de fenda
 * Alicate de corte reto
 * Sargento (opcional)
@@ -51,13 +51,13 @@ Abaixo você pode clicar em cada uma das imagens. Cada seção tem um guia de im
 ### Todos os Consumiveis necessários
 > Quase todas as peças que requerem parafuso, podem ser simplesmente coladas. No mk16 as peças são coladas com excessão do frame frontal
 * Cola de dois componentes (araldite ta ótimo)
-* 10x inserto de latão M3 (5~7mm de altura)
-* 18x iinserto de latão M3 3mm de altura
-* 8 a 16x inserto de latão M4 (5~7mm de altura)
-* 8 a 16x parafusos M4 de cabeça chata 10~15mm
-* 4x parafusos M3 de cabeça chata 10mm
-* 12 a 18x parafusos M3 6mm
-* 2x imãs de neodímio 10mmX2mm
+* 10x [inserto de latão M3 (5~7mm de altura)](https://pt.aliexpress.com/item/1005003582355741.html)
+* 18x [inserto de latão M3 3mm de altura](https://pt.aliexpress.com/item/1005003582355741.html)
+* 8 a 16x [inserto de latão M4 (5~7mm de altura)](https://pt.aliexpress.com/item/1005003582355741.html)
+* 8 a 16x [parafusos M4 de cabeça chata 10~15mm](https://pt.aliexpress.com/item/32973784147.html)
+* 4x [parafusos M3 de cabeça chata 10mm](https://pt.aliexpress.com/item/32973784147.html)
+* 12 a [18x parafusos M3 6mm](https://pt.aliexpress.com/item/32973784147.html)
+* 2x [imãs de neodímio 10mmX2mm](https://pt.aliexpress.com/item/1005011876332886.html)
 * PETG, ASA e TPU
 * PLA transparente
 * PLA preto

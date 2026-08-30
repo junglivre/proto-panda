@@ -28,7 +28,7 @@ Alguns conversores buck têm problemas com capacitores extras, então o capacito
 6) [Buzzer 5 ou 3.3v](https://aliexpress.com/item/1005006201550296.html)
 7) [Conector para o HUB75](https://aliexpress.com/item/1005007851512814.html) (Pegue o de 16 pinos)
 8) [Fita de LED WS2812b](https://pt.aliexpress.com/item/1005007989431712.html)
-9) [Fan 50x10mm 5v](https://pt.aliexpress.com/item/1005006644946703.html)
+9) [Fan 40x10mm 5v](https://pt.aliexpress.com/item/1005009148488355.html)
 10) Algumas barras de pino fêmea e macho
 11) Resistores (1k, 3k e 10k)
 12) Um capacitor eletrolítico entre 1000uF a 4700uF de pelo menos 6.3v (pode ser dispensável)

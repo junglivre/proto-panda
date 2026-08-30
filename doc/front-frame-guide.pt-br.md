@@ -30,11 +30,11 @@ Então você precisará da eletrônica:
 * 1x [Fan 4010 5v 40mmx10cm](https://pt.aliexpress.com/item/1005009148488355.html)
 * 1x Cabo USB
 * 1x [Tela oled 0.96 polegadas](https://pt.aliexpress.com/item/1005006262908701.html)
-* Alguns cabos
-* 4x Parafusos M2 6mm
-* 4x Porcas M2
-* 2x Parafusos M3 16mm~18mm
-* 4~6x Parafusos M3 8mm
+* Alguns fios para soldar
+* 4x [Parafusos M2 6mm](https://pt.aliexpress.com/item/32973784147.html)
+* 4x [Porcas M2](https://pt.aliexpress.com/item/1005005139195269.html)
+* 2x [Parafusos M3 16mm~18mm](https://pt.aliexpress.com/item/32973784147.html)
+* 4~6x [Parafusos M3 8mm](https://pt.aliexpress.com/item/32973784147.html)
 * 2x [Porca M3 auto-roscante](https://pt.aliexpress.com/item/1005008207473770.html)
 
 
@@ -44,8 +44,8 @@ Então você precisará da eletrônica:
 
 * 2x [Terminal IDC 8x2](https://pt.aliexpress.com/item/1005007995752212.html)
 * 2x Porcas M3
-* 2x Parafusos M3 8MM
-* 2x Parafusos M3 4MM
+* 2x [Parafusos M3 8MM](https://pt.aliexpress.com/item/32973784147.html)
+* 2x [Parafusos M3 4MM](https://pt.aliexpress.com/item/32973784147.html)
 * [Lente de Fresnel](https://pt.aliexpress.com/item/1005009696060069.html)
 * [KF2510](https://pt.aliexpress.com/item/1005011814149800.html?) Pegue o de 4 pinos.
 
