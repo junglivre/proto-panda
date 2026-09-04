@@ -66,9 +66,27 @@ function input.parseInputLocation(str)
                 error("Unavalible resource '"..controllerType.."'")
             end
             
+            local mode = 'none'
             if element:match(".-=.+") then 
+                mode = 'equals'
                 element, toMatch = element:match("(.-)=(.+)")
+            elseif element:match(".->.+") then 
+                mode = 'greater'
+                element, toMatch = element:match("(.-)>(.+)")
+                toMatch = tonumber(toMatch)
+                if not toMatch then 
+                    error("Unavalible resource '"..element.."' in '"..str.."'. is expected to be a number")
+                end
+            elseif element:match(".-<.+") then 
+                mode = 'lesser'
+                element, toMatch = element:match("(.-)<(.+)")
+                toMatch = tonumber(toMatch)
+                if not toMatch then 
+                    error("Unavalible resource '"..element.."' in '"..str.."'. is expected to be a number")
+                end
             end
+
+
             parsed.name = element
             if not handler[element] then  
                 local avaliable = ""
@@ -92,6 +110,7 @@ function input.parseInputLocation(str)
             
             if toMatch then  
                 parsed.match = tonumber(toMatch) or toMatch
+                parsed.mode = mode
                 mappedLogString = "'"..controllerType.."' when '"..element.."' equals '"..parsed.match.."'"
                 break
             end
@@ -278,7 +297,23 @@ function input.updatGenericButtonStates(inputModes, clientId, pdButtonIdOffset)
                     element = controller[clientId][element]
                 end
                 if bind.match then  
-                    reading = element == bind.match and 1 or 0
+                    if bind.mode == 'equals' then
+                        reading = element == bind.match and 1 or 0
+                    elseif bind.mode == 'greater' then 
+                        local n = tonumber(element) or 0
+                        if n > bind.match then  
+                            reading = 1
+                        else 
+                            reading = 0
+                        end
+                    elseif bind.mode == 'lesser' then 
+                        local n = tonumber(element) or 0
+                        if n < bind.match then  
+                            reading = 1
+                        else 
+                            reading = 0
+                        end
+                    end
                 elseif bind.location then 
                     if type(element) ~= 'table' then  
                         error(tostring(bind.resource[clientId]).." is looking for "..tostring(controller[clientId]).." at "..bind.location.." ref is "..tostring(bind.reference).." element = "..tostring(element))

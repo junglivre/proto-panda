@@ -48,6 +48,18 @@
     "generic.buttons.3": "BUTTON_RIGHT",
     "generic.buttons.2": "BUTTON_UP",
     "generic.buttons.5": "BUTTON_CONFIRM",
-    "generic.buttons.6": "BUTTON_BACK"
+    "generic.buttons.6": "BUTTON_BACK",
+    "keyboard.button=180": "BUTTON_DOWN",
+    "keyboard.button=179": "BUTTON_UP",
+    "keyboard.button=181": "BUTTON_RIGHT",
+    "keyboard.button=182": "BUTTON_LEFT",
+    "keyboard.button=205": "BUTTON_CONFIRM",
+    "keyboard.button=234": "BUTTON_BACK",
+    "keyboard.button=233": "BUTTON_AUX_A",
+    "keyboard.button=64": "BUTTON_AUX_B",
+    "mouse.x>25": "BUTTON_LEFT",
+    "mouse.x<-25": "BUTTON_RIGHT",
+    "mouse.y<-25": "BUTTON_UP",
+    "mouse.y>25": "BUTTON_DOWN"
   }
 }

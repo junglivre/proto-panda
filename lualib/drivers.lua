@@ -289,7 +289,7 @@ function drivers.onConnectHID(connectionId, controllerId, address, name)
     local matchedDriver, matchName = drivers.FindDriver(connectionId, controllerId, address, name)
     drivers.ConnectDevice(controllerId, address, matchName or 'hid')
 
-    log("Connected conId="..connectionId.." controller="..controllerId.." addr=\""..address.."\" name=["..name.."] type="..matchName)
+    log("Connected conId="..connectionId.." controller="..controllerId.." addr=\""..address.."\" name=["..name.."] type="..(matchName or 'hid'))
 end
 
 function drivers.onHidCallback(connectionId, controllerId, data)
