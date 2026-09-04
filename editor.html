@@ -719,6 +719,88 @@
             background-color: #cccccc;
             cursor: not-allowed;
         }
+
+        /* Pixel art frame editor styles */
+        .editable-frame-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 90px;
+        }
+
+        .editable-frame-thumb {
+            width: 64px;
+            height: 32px;
+            image-rendering: pixelated;
+            border: 1px solid #ddd;
+            background-color: #fff;
+            cursor: pointer;
+            transition: box-shadow 0.15s;
+        }
+
+        .editable-frame-thumb:hover {
+            box-shadow: 0 0 0 2px var(--button-color);
+        }
+
+        .editable-frame-label {
+            font-size: 0.75em;
+            color: #666;
+            text-align: center;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 4px;
+        }
+
+        .editable-frame-edit-btn {
+            margin-top: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+        }
+
+        .pixel-editor-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .pixel-editor-toolbar button.tool-btn {
+            background-color: #6c757d;
+        }
+
+        .pixel-editor-toolbar button.tool-btn.active {
+            background-color: var(--button-color);
+            outline: 2px solid var(--primary-color);
+        }
+
+        .pixel-editor-canvas-wrap {
+            display: inline-block;
+            border: 1px solid #ccc;
+            line-height: 0;
+            background-image:
+                linear-gradient(45deg, #ccc 25%, transparent 25%),
+                linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #ccc 75%),
+                linear-gradient(-45deg, transparent 75%, #ccc 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+            max-width: 100%;
+            overflow: auto;
+        }
+
+        #pixel-editor-canvas {
+            display: block;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        #pixel-editor-filename {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 
@@ -805,7 +887,7 @@
                     <button id="clear-frames-to-group" onclick="clearSelectedFiles()">Clear All Files</button>
                 </div>
                 <div id="selected-files-list" style="margin-top: 10px;"></div>
-                <small id="frame-editor-note">Note: Uploading new files is only possible when creating a new group. To edit, only flip and color settings can be changed.</small>
+                <small id="frame-editor-note">Note: Uploading new files is only possible when creating a new group. To edit an existing group, you can change flip/color settings, and click any frame thumbnail below to edit its pixels directly.</small>
             </div>
 
             <div style="margin-top: 15px;">
@@ -971,6 +1053,38 @@
           overflow-y: auto;
           margin: 0;
         "></textarea>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="pixel-editor-modal">
+        <div class="modal-content" style="width: 90%; max-width: 760px;">
+            <h2>Edit Frame Pixels</h2>
+            <div id="pixel-editor-filename"></div>
+
+            <div class="pixel-editor-toolbar">
+                <label style="display: flex; align-items: center; gap: 5px;">
+                    <b>Color:</b>
+                    <input type="color" id="pixel-color-picker" value="#000000">
+                </label>
+                <button id="pixel-tool-pencil" class="tool-btn active" type="button">Pencil</button>
+                <button id="pixel-tool-eraser" class="tool-btn" type="button">Eraser</button>
+                <button id="pixel-tool-fill" class="tool-btn" type="button">Fill</button>
+                <button id="pixel-clear-btn" class="secondary" type="button">Clear All</button>
+                <label style="display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="pixel-grid-toggle" checked> Grid
+                </label>
+            </div>
+
+            <div class="pixel-editor-canvas-wrap">
+                <canvas id="pixel-editor-canvas" width="640" height="320"></canvas>
+            </div>
+
+            <div class="edit-controls" style="margin-top: 15px;">
+                <button id="pixel-save-btn">Save & Upload</button>
+                <button id="pixel-cancel-btn" class="secondary">Cancel</button>
+            </div>
+
+            <div id="pixel-editor-status" style="margin-top: 10px; font-size: 0.9em;"></div>
         </div>
     </div>
 
@@ -2167,7 +2281,7 @@
 
             if (isEditing) {
                 selectedFiles = [];
-                document.getElementById('selected-files-list').innerHTML = `<p>Editing frame properties. File content cannot be changed here.</p>`;
+                renderEditableFrameFilesList(frameDef);
             } else {
                 selectedFiles = [];
                 document.getElementById('selected-files-list').innerHTML = '<p>No files selected</p>';
@@ -2930,6 +3044,462 @@
                 editorModal.style.display = 'none';
             });
         }
+
+        //////// Pixel Art Frame Editor Logic ////////////
+
+        const PIXEL_EDITOR_W = 64;
+        const PIXEL_EDITOR_H = 32;
+        const PIXEL_EDITOR_SCALE = 10;
+
+        let pixelEditorData = null;       // Uint8ClampedArray, RGBA per pixel
+        let pixelEditorPath = null;       // path of the file currently being edited
+        let pixelEditorGroupDef = null;   // the frame group (frameDef) this file belongs to
+        let pixelEditorTool = 'pencil';   // 'pencil' | 'eraser' | 'fill'
+        let pixelEditorIsDrawing = false;
+        let pixelEditorShowGrid = true;
+        let pixelEditorIsNewFrame = false; // true when adding a brand new frame instead of editing an existing one
+
+        // Returns every existing frame in a group as {path, frameNumber} objects,
+        // regardless of whether the group is defined via an explicit 'files' array
+        // or via a 'pattern' + 'from'/'to' numeric range.
+        function getFrameGroupPaths(frameDef) {
+            if (frameDef.files) {
+                return frameDef.files.map((path, idx) => ({ path, frameNumber: idx + 1 }));
+            } else if (frameDef.pattern && frameDef.from !== undefined && frameDef.to !== undefined) {
+                const result = [];
+                for (let i = frameDef.from; i <= frameDef.to; i++) {
+                    result.push({ path: sprintf(frameDef.pattern, i), frameNumber: i });
+                }
+                return result;
+            }
+            return [];
+        }
+
+        // Computes the path a brand new frame should be saved to, following the
+        // group's existing naming convention (pattern-based groups increment the
+        // counter by 1; files-based groups get a new sequential filename).
+        function computeNextFramePath(frameDef) {
+            if (frameDef.pattern && frameDef.from !== undefined && frameDef.to !== undefined) {
+                const nextNumber = frameDef.to + 1;
+                return { path: sprintf(frameDef.pattern, nextNumber) };
+            }
+
+            let dir = `/expressions/${frameDef.name}`;
+            let count = 0;
+            if (frameDef.files && frameDef.files.length > 0) {
+                const sample = frameDef.files[0];
+                dir = sample.substring(0, sample.lastIndexOf('/'));
+                count = frameDef.files.length;
+            }
+            return { path: `${dir}/frame_${count + 1}.png` };
+        }
+
+        // Renders the thumbnail list of individual frames inside an existing
+        // frame group, each clickable to open the pixel editor for that frame.
+        function renderEditableFrameFilesList(frameDef) {
+            const container = document.getElementById('selected-files-list');
+            container.innerHTML = '';
+
+            const frames = getFrameGroupPaths(frameDef);
+
+            if (frames.length === 0) {
+                container.innerHTML = '<p>No frames in this group yet.</p>';
+            } else {
+                const intro = document.createElement('p');
+                intro.style.margin = '0 0 10px 0';
+                intro.textContent = 'Click a frame to edit its pixels:';
+                container.appendChild(intro);
+
+                const listWrap = document.createElement('div');
+                listWrap.style.display = 'flex';
+                listWrap.style.flexWrap = 'wrap';
+                listWrap.style.gap = '10px';
+
+                frames.forEach(({ path, frameNumber }) => {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'editable-frame-item';
+
+                    const stripped = path.startsWith('/') ? path.slice(1) : path;
+
+                    const img = document.createElement('img');
+                    img.className = 'editable-frame-thumb';
+                    img.src = stripped;
+                    img.alt = `Frame ${frameNumber}`;
+                    img.title = 'Click to edit pixels';
+                    img.addEventListener('click', () => openPixelEditor(path, frameDef));
+
+                    const label = document.createElement('div');
+                    label.className = 'editable-frame-label';
+                    label.textContent = `Frame ${frameNumber}`;
+
+                    const editBtn = document.createElement('button');
+                    editBtn.type = 'button';
+                    editBtn.className = 'editable-frame-edit-btn';
+                    editBtn.textContent = 'Edit pixels';
+                    editBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        openPixelEditor(path, frameDef);
+                    });
+
+                    wrap.appendChild(img);
+                    wrap.appendChild(label);
+                    wrap.appendChild(editBtn);
+                    listWrap.appendChild(wrap);
+                });
+
+                container.appendChild(listWrap);
+            }
+
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.textContent = '+ Add New Frame';
+            addBtn.style.marginTop = '10px';
+            addBtn.addEventListener('click', () => openPixelEditorForNewFrame(frameDef));
+            container.appendChild(addBtn);
+        }
+
+        function loadImageForEditing(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(new Error('Failed to load image'));
+                img.src = src;
+            });
+        }
+
+        async function openPixelEditor(filePath, frameDef) {
+            pixelEditorPath = filePath;
+            pixelEditorGroupDef = frameDef;
+            pixelEditorIsNewFrame = false;
+            setPixelEditorTool('pencil');
+            document.getElementById('pixel-editor-status').textContent = '';
+
+            const stripped = filePath.startsWith('/') ? filePath.slice(1) : filePath;
+            const filename = filePath.split('/').pop();
+            document.getElementById('pixel-editor-filename').textContent =
+                `Editing: ${filename} (${frameDef.name}) — image is always 64×32px`;
+
+            const canvas = document.getElementById('pixel-editor-canvas');
+            canvas.width = PIXEL_EDITOR_W * PIXEL_EDITOR_SCALE;
+            canvas.height = PIXEL_EDITOR_H * PIXEL_EDITOR_SCALE;
+
+            const offCanvas = document.createElement('canvas');
+            offCanvas.width = PIXEL_EDITOR_W;
+            offCanvas.height = PIXEL_EDITOR_H;
+            const offCtx = offCanvas.getContext('2d');
+            offCtx.imageSmoothingEnabled = false;
+
+            try {
+                const img = await loadImageForEditing(`${stripped}?t=${Date.now()}`);
+                offCtx.drawImage(img, 0, 0, PIXEL_EDITOR_W, PIXEL_EDITOR_H);
+            } catch (err) {
+                console.warn('Could not load existing frame image, starting from a blank canvas:', err);
+                offCtx.clearRect(0, 0, PIXEL_EDITOR_W, PIXEL_EDITOR_H);
+            }
+
+            pixelEditorData = offCtx.getImageData(0, 0, PIXEL_EDITOR_W, PIXEL_EDITOR_H).data;
+            renderPixelEditorCanvas();
+            document.getElementById('pixel-editor-modal').style.display = 'flex';
+        }
+
+        // Opens the pixel editor with a blank 64x32 canvas to create a brand new
+        // frame, following the group's existing naming convention.
+        function openPixelEditorForNewFrame(frameDef) {
+            const { path } = computeNextFramePath(frameDef);
+
+            pixelEditorPath = path;
+            pixelEditorGroupDef = frameDef;
+            pixelEditorIsNewFrame = true;
+            setPixelEditorTool('pencil');
+            document.getElementById('pixel-editor-status').textContent = '';
+
+            const filename = path.split('/').pop();
+            document.getElementById('pixel-editor-filename').textContent =
+                `New frame: ${filename} (${frameDef.name}) — image is always 64×32px`;
+
+            const canvas = document.getElementById('pixel-editor-canvas');
+            canvas.width = PIXEL_EDITOR_W * PIXEL_EDITOR_SCALE;
+            canvas.height = PIXEL_EDITOR_H * PIXEL_EDITOR_SCALE;
+
+            pixelEditorData = new Uint8ClampedArray(PIXEL_EDITOR_W * PIXEL_EDITOR_H * 4);
+            renderPixelEditorCanvas();
+            document.getElementById('pixel-editor-modal').style.display = 'flex';
+        }
+
+        function closePixelEditor() {
+            document.getElementById('pixel-editor-modal').style.display = 'none';
+            pixelEditorPath = null;
+            pixelEditorGroupDef = null;
+            pixelEditorData = null;
+            pixelEditorIsNewFrame = false;
+        }
+
+        function renderPixelEditorCanvas() {
+            if (!pixelEditorData) return;
+            const canvas = document.getElementById('pixel-editor-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < PIXEL_EDITOR_H; y++) {
+                for (let x = 0; x < PIXEL_EDITOR_W; x++) {
+                    const idx = (y * PIXEL_EDITOR_W + x) * 4;
+                    const a = pixelEditorData[idx + 3];
+                    if (a === 0) continue;
+                    const r = pixelEditorData[idx];
+                    const g = pixelEditorData[idx + 1];
+                    const b = pixelEditorData[idx + 2];
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a / 255})`;
+                    ctx.fillRect(x * PIXEL_EDITOR_SCALE, y * PIXEL_EDITOR_SCALE, PIXEL_EDITOR_SCALE, PIXEL_EDITOR_SCALE);
+                }
+            }
+
+            if (pixelEditorShowGrid) {
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+                ctx.lineWidth = 1;
+                for (let x = 0; x <= PIXEL_EDITOR_W; x++) {
+                    ctx.beginPath();
+                    ctx.moveTo(x * PIXEL_EDITOR_SCALE + 0.5, 0);
+                    ctx.lineTo(x * PIXEL_EDITOR_SCALE + 0.5, canvas.height);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= PIXEL_EDITOR_H; y++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y * PIXEL_EDITOR_SCALE + 0.5);
+                    ctx.lineTo(canvas.width, y * PIXEL_EDITOR_SCALE + 0.5);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        function setPixelEditorTool(tool) {
+            pixelEditorTool = tool;
+            document.getElementById('pixel-tool-pencil').classList.toggle('active', tool === 'pencil');
+            document.getElementById('pixel-tool-eraser').classList.toggle('active', tool === 'eraser');
+            document.getElementById('pixel-tool-fill').classList.toggle('active', tool === 'fill');
+        }
+
+        function hexToRgb(hex) {
+            const v = parseInt(hex.replace('#', ''), 16);
+            return { r: (v >> 16) & 255, g: (v >> 8) & 255, b: v & 255 };
+        }
+
+        function setPixelAt(px, py, r, g, b, a) {
+            if (px < 0 || px >= PIXEL_EDITOR_W || py < 0 || py >= PIXEL_EDITOR_H) return;
+            const idx = (py * PIXEL_EDITOR_W + px) * 4;
+            pixelEditorData[idx] = r;
+            pixelEditorData[idx + 1] = g;
+            pixelEditorData[idx + 2] = b;
+            pixelEditorData[idx + 3] = a;
+        }
+
+        function pixelEditorCoordsFromEvent(e) {
+            const canvas = document.getElementById('pixel-editor-canvas');
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const point = e.touches && e.touches.length ? e.touches[0] : e;
+            const cx = (point.clientX - rect.left) * scaleX;
+            const cy = (point.clientY - rect.top) * scaleY;
+            return {
+                px: Math.floor(cx / PIXEL_EDITOR_SCALE),
+                py: Math.floor(cy / PIXEL_EDITOR_SCALE)
+            };
+        }
+
+        function floodFillPixelEditor(startX, startY, fillR, fillG, fillB, fillA) {
+            if (startX < 0 || startX >= PIXEL_EDITOR_W || startY < 0 || startY >= PIXEL_EDITOR_H) return;
+
+            const startIdx = (startY * PIXEL_EDITOR_W + startX) * 4;
+            const targetR = pixelEditorData[startIdx];
+            const targetG = pixelEditorData[startIdx + 1];
+            const targetB = pixelEditorData[startIdx + 2];
+            const targetA = pixelEditorData[startIdx + 3];
+
+            if (targetR === fillR && targetG === fillG && targetB === fillB && targetA === fillA) return;
+
+            const stack = [[startX, startY]];
+            const visited = new Uint8Array(PIXEL_EDITOR_W * PIXEL_EDITOR_H);
+
+            while (stack.length) {
+                const [x, y] = stack.pop();
+                if (x < 0 || x >= PIXEL_EDITOR_W || y < 0 || y >= PIXEL_EDITOR_H) continue;
+
+                const vIdx = y * PIXEL_EDITOR_W + x;
+                if (visited[vIdx]) continue;
+
+                const idx = vIdx * 4;
+                if (pixelEditorData[idx] !== targetR || pixelEditorData[idx + 1] !== targetG ||
+                    pixelEditorData[idx + 2] !== targetB || pixelEditorData[idx + 3] !== targetA) continue;
+
+                visited[vIdx] = 1;
+                pixelEditorData[idx] = fillR;
+                pixelEditorData[idx + 1] = fillG;
+                pixelEditorData[idx + 2] = fillB;
+                pixelEditorData[idx + 3] = fillA;
+
+                stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+            }
+        }
+
+        function paintAtEvent(e) {
+            if (!pixelEditorData) return;
+            const { px, py } = pixelEditorCoordsFromEvent(e);
+            const colorHex = document.getElementById('pixel-color-picker').value;
+            const { r, g, b } = hexToRgb(colorHex);
+
+            if (pixelEditorTool === 'fill') {
+                floodFillPixelEditor(px, py, r, g, b, 255);
+            } else if (pixelEditorTool === 'eraser') {
+                setPixelAt(px, py, 0, 0, 0, 0);
+            } else {
+                setPixelAt(px, py, r, g, b, 255);
+            }
+            renderPixelEditorCanvas();
+        }
+
+        function refreshImagesForPath(fullPath) {
+            const stripped = fullPath.startsWith('/') ? fullPath.slice(1) : fullPath;
+            const bust = Date.now();
+            document.querySelectorAll('img').forEach(img => {
+                const src = img.getAttribute('src') || '';
+                const baseSrc = src.split('?')[0];
+                if (baseSrc === stripped) {
+                    img.src = `${stripped}?t=${bust}`;
+                }
+            });
+        }
+
+        async function savePixelEditorFrame() {
+            if (!pixelEditorPath || !pixelEditorData) return;
+
+            const statusEl = document.getElementById('pixel-editor-status');
+            const saveBtn = document.getElementById('pixel-save-btn');
+            saveBtn.disabled = true;
+
+            try {
+                statusEl.textContent = 'Encoding PNG...';
+
+                const outCanvas = document.createElement('canvas');
+                outCanvas.width = PIXEL_EDITOR_W;
+                outCanvas.height = PIXEL_EDITOR_H;
+                const outCtx = outCanvas.getContext('2d');
+                const imgData = outCtx.createImageData(PIXEL_EDITOR_W, PIXEL_EDITOR_H);
+                imgData.data.set(pixelEditorData);
+                outCtx.putImageData(imgData, 0, 0);
+
+                const blob = await new Promise(resolve => outCanvas.toBlob(resolve, 'image/png'));
+                if (!blob) throw new Error('Failed to encode PNG');
+
+                const fullPath = pixelEditorPath.startsWith('/') ? pixelEditorPath : '/' + pixelEditorPath;
+                const dir = fullPath.substring(0, fullPath.lastIndexOf('/'));
+                const filename = fullPath.substring(fullPath.lastIndexOf('/') + 1);
+
+                // For an EXISTING frame, remove the old file first so the upload
+                // cleanly replaces it. Brand new frames have nothing to delete.
+                if (!pixelEditorIsNewFrame) {
+                    statusEl.textContent = 'Removing old file...';
+                    const deleteResponse = await fetch(`/delete?path=${encodeURIComponent(fullPath)}`, { method: 'DELETE' });
+                    if (!deleteResponse.ok && deleteResponse.status !== 404) {
+                        throw new Error(`Failed to delete old file: ${await deleteResponse.text()}`);
+                    }
+                }
+
+                // Upload the PNG under the exact desired name/path
+                statusEl.textContent = pixelEditorIsNewFrame ? 'Uploading new frame...' : 'Uploading updated frame...';
+                const file = new File([blob], filename, { type: 'image/png' });
+                const formData = new FormData();
+                formData.append('path', dir);
+                formData.append('file', file, filename);
+
+                const uploadResponse = await fetch('/upload', { method: 'POST', body: formData });
+                if (!uploadResponse.ok) {
+                    throw new Error(`Failed to upload new frame: ${await uploadResponse.text()}`);
+                }
+
+                // If this was a brand new frame, extend the group definition so
+                // the app knows about it (increment 'to' for pattern-based groups,
+                // or append the path for files-based groups).
+                if (pixelEditorIsNewFrame && pixelEditorGroupDef) {
+                    const frameDef = pixelEditorGroupDef;
+                    if (frameDef.pattern && frameDef.from !== undefined && frameDef.to !== undefined) {
+                        frameDef.to = frameDef.to + 1;
+                    } else if (frameDef.files) {
+                        frameDef.files.push(fullPath);
+                    } else {
+                        frameDef.files = [fullPath];
+                    }
+                }
+
+                frameClassesModified = true;
+                statusEl.textContent = 'Saved!';
+
+                // Refresh any on-screen previews using this same path
+                refreshImagesForPath(fullPath);
+
+                if (pixelEditorGroupDef) {
+                    renderEditableFrameFilesList(pixelEditorGroupDef);
+                }
+                renderFrameClassesDefinitions();
+
+                if (currentExpression && pixelEditorGroupDef && currentExpression.frames === pixelEditorGroupDef.name) {
+                    setExpression(activeExpressionIndex);
+                }
+
+                setTimeout(closePixelEditor, 500);
+            } catch (err) {
+                console.error('Pixel editor save error:', err);
+                statusEl.textContent = 'Error: ' + err.message;
+            } finally {
+                saveBtn.disabled = false;
+            }
+        }
+
+        function setupPixelEditorEvents() {
+            const canvas = document.getElementById('pixel-editor-canvas');
+
+            canvas.addEventListener('mousedown', (e) => {
+                pixelEditorIsDrawing = true;
+                paintAtEvent(e);
+            });
+            canvas.addEventListener('mousemove', (e) => {
+                if (pixelEditorIsDrawing && pixelEditorTool !== 'fill') paintAtEvent(e);
+            });
+            window.addEventListener('mouseup', () => { pixelEditorIsDrawing = false; });
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                pixelEditorIsDrawing = true;
+                paintAtEvent(e);
+            }, { passive: false });
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (pixelEditorIsDrawing && pixelEditorTool !== 'fill') paintAtEvent(e);
+            }, { passive: false });
+            canvas.addEventListener('touchend', () => { pixelEditorIsDrawing = false; });
+
+            document.getElementById('pixel-tool-pencil').addEventListener('click', () => setPixelEditorTool('pencil'));
+            document.getElementById('pixel-tool-eraser').addEventListener('click', () => setPixelEditorTool('eraser'));
+            document.getElementById('pixel-tool-fill').addEventListener('click', () => setPixelEditorTool('fill'));
+
+            document.getElementById('pixel-clear-btn').addEventListener('click', () => {
+                if (!pixelEditorData) return;
+                if (!confirm('Clear all pixels on this frame?')) return;
+                pixelEditorData.fill(0);
+                renderPixelEditorCanvas();
+            });
+
+            document.getElementById('pixel-grid-toggle').addEventListener('change', (e) => {
+                pixelEditorShowGrid = e.target.checked;
+                renderPixelEditorCanvas();
+            });
+
+            document.getElementById('pixel-save-btn').addEventListener('click', savePixelEditorFrame);
+            document.getElementById('pixel-cancel-btn').addEventListener('click', closePixelEditor);
+        }
+
+        document.addEventListener('DOMContentLoaded', setupPixelEditorEvents);
     </script>
 </body>
 

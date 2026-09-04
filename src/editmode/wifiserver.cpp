@@ -176,6 +176,104 @@ void handleCopy(AsyncWebServerRequest *request){
   request->send(200, "text/plain", "OK");
 }
 
+void handleMv(AsyncWebServerRequest *request){
+  if (!request->hasParam("src") || !request->hasParam("dst")){
+    request->send(400, "text/plain", "Missing src or dst parameter");
+    return;
+  }
+
+  String srcPath = request->getParam("src")->value();
+  String dstPath = request->getParam("dst")->value();
+
+  if (!PANDA_SD.exists(srcPath)){
+    request->send(404, "text/plain", "Source file not found");
+    return;
+  }
+
+  File src = PANDA_SD.open(srcPath);
+  if (src.isDirectory()){
+    src.close();
+    request->send(400, "text/plain", "Source is a directory");
+    return;
+  }
+
+  // Extract directory path from dstPath
+  int lastSlash = dstPath.lastIndexOf('/');
+  if (lastSlash > 0){
+    String dstDir = dstPath.substring(0, lastSlash);
+    
+    // Create directory if it doesn't exist
+    if (!PANDA_SD.exists(dstDir)){
+      // Create all necessary parent directories
+      String currentPath = "";
+      for (int i = 0; i < dstDir.length(); i++){
+        currentPath += dstDir[i];
+        if (dstDir[i] == '/' && i > 0) // Found a directory level
+        {
+          if (!PANDA_SD.exists(currentPath.substring(0, currentPath.length() - 1))){
+            if (!PANDA_SD.mkdir(currentPath.substring(0, currentPath.length() - 1))){
+              src.close();
+              request->send(500, "text/plain", "Failed to create directory: " + currentPath);
+              return;
+            }
+          }
+        }
+      }
+      
+      // Create the final directory
+      if (!PANDA_SD.mkdir(dstDir)){
+        src.close();
+        request->send(500, "text/plain", "Failed to create destination directory");
+        return;
+      }
+    }
+  }
+
+  // Check if destination already exists (file, not directory)
+  if (PANDA_SD.exists(dstPath)){
+    File dstCheck = PANDA_SD.open(dstPath);
+    if (!dstCheck.isDirectory()) // Only fail if it's a file
+    {
+      src.close();
+      dstCheck.close();
+      request->send(409, "text/plain", "Destination already exists");
+      return;
+    }
+    dstCheck.close();
+  }
+
+  File dst = PANDA_SD.open(dstPath, FILE_WRITE);
+  if (!dst){
+    src.close();
+    request->send(500, "text/plain", "Failed to create destination file");
+    return;
+  }
+
+  uint8_t buffer[512];
+  size_t bytesRead;
+  bool error = false;
+  
+  while ((bytesRead = src.read(buffer, sizeof(buffer))) > 0){
+    if (dst.write(buffer, bytesRead) != bytesRead){
+      error = true;
+      break;
+    }
+  }
+
+  src.close();
+  dst.close();
+
+  if (error){
+    PANDA_SD.remove(dstPath);
+    request->send(500, "text/plain", "Copy failed");
+    return;
+  }
+
+  PANDA_SD.remove(srcPath);
+
+  request->send(200, "text/plain", "OK");
+}
+
 void handleRm(AsyncWebServerRequest *request){
   if (!request->hasParam("path")){
     request->send(400, "text/plain", "Missing path parameter");
@@ -924,6 +1022,7 @@ void startWifiServer(int port){
   server->on("/upload", HTTP_POST, [](AsyncWebServerRequest *request){ request->send(200); }, handleUpload);
   server->on("/delete", HTTP_DELETE, handleRm);
   server->on("/copy", HTTP_PUT, handleCopy);
+  server->on("/mv", HTTP_PUT, handleMv);
   server->on("/lua", HTTP_POST, handleLuaExecution);
   server->on("/compose_start", HTTP_POST, handleComposeStart);
   server->on("/compose_progress", HTTP_GET, handleComposeGet);
