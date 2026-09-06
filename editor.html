@@ -40,12 +40,33 @@
         }
 
         #image-container {
+            display: none;
             margin: 20px 0;
             border: 2px solid var(--primary-color);
             border-radius: 8px;
             overflow: hidden;
             align-items: center;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Only show the live animation preview while the Expressions Editor is open */
+        .full-edit-mode #image-container {
+            display: block;
+        }
+
+        /* Brief glow that plays near the edge of the preview whenever a field
+           change causes the animation to be rebuilt/restarted. */
+        @keyframes preview-update-glow {
+            0% {
+                box-shadow: 0 0 0 0 rgba(90, 143, 211, 0.9), 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+            100% {
+                box-shadow: 0 0 16px 6px rgba(90, 143, 211, 0), 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+        }
+
+        #image-container.preview-flash {
+            animation: preview-update-glow 0.7s ease-out;
         }
 
         #image-display {
@@ -237,6 +258,16 @@
         .frame-item.dragging {
             opacity: 0.5;
             transform: scale(1.1);
+        }
+
+        /* Thin indicator shown during drag to preview where the frame will
+           land; uses box-shadow so it never affects layout/reflow. */
+        .frame-item.drag-insert-before {
+            box-shadow: -3px 0 0 0 var(--primary-color);
+        }
+
+        .frame-item.drag-insert-after {
+            box-shadow: 3px 0 0 0 var(--primary-color);
         }
 
         .frame-item.invalid {
@@ -474,23 +505,10 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
-            height: 20%;
+            flex: 1;
         }
 
         .right-panel-container .panel {
-            flex: 1;
-            min-height: 0;
-            overflow: auto;
-        }
-
-        .right-panel-container .panel:first-child {
-            height: 250px;
-            flex: 0 0 auto;
-            /* Don't grow or shrink */
-            overflow: auto;
-        }
-
-        .right-panel-container .panel:last-child {
             flex: 1;
             min-height: 0;
             overflow: auto;
@@ -726,6 +744,16 @@
             flex-direction: column;
             align-items: center;
             width: 90px;
+            cursor: grab;
+        }
+
+        .editable-frame-item.dragging {
+            opacity: 0.4;
+        }
+
+        .editable-frame-item.drag-over {
+            outline: 2px dashed var(--primary-color);
+            outline-offset: 2px;
         }
 
         .editable-frame-thumb {
@@ -824,15 +852,6 @@
 
         <div class="right-panel-container">
             <div class="panel">
-                <h2>Configuration Details</h2>
-                <div id="config-details">
-                    <p>Select an expression to view details</p>
-                </div>
-                <div id="frame-editor-container" style="display: none;">
-                </div>
-            </div>
-
-            <div class="panel">
                 <h2>Frame groups
                     <button id="add-frame-btn" class="add-expression-btn" style="float: right;">+ Add frame
                         class</button>
@@ -883,11 +902,17 @@
                 <label for="frame-files"><b>Upload Frame Files (64×32 PNG only):</b></label>
                 <input type="file" id="frame-files" multiple accept="image/png,.png" style="display: none;">
                 <div style="display: flex; justify-content: space-between; margin-top: 10px;">
-                    <button id="add-frames-to-group" onclick="document.getElementById('frame-files').click()">Add frames</button>
+                    <button id="add-frames-to-group" onclick="attemptAddFrames()">Add frames</button>
                     <button id="clear-frames-to-group" onclick="clearSelectedFiles()">Clear All Files</button>
                 </div>
                 <div id="selected-files-list" style="margin-top: 10px;"></div>
                 <small id="frame-editor-note">Note: Uploading new files is only possible when creating a new group. To edit an existing group, you can change flip/color settings, and click any frame thumbnail below to edit its pixels directly.</small>
+            </div>
+
+            <div id="existing-frames-section" style="margin-top: 15px; display: none;">
+                <div><b>Existing frames (drag to reorder, click to edit pixels):</b></div>
+                <div id="existing-frames-list" style="margin-top: 10px;"></div>
+                <small id="reorder-note">Drag a frame thumbnail to change its position in the sequence.</small>
             </div>
 
             <div style="margin-top: 15px;">
@@ -932,17 +957,12 @@
                 <input type="number" id="full-animation-duration" min="50" step="50">
             </div>
         </div>
-        <div><b>Frames:</b></div>
-        <div class="frames-type-selector">
-            <div class="frames-type-selector">
-                <div><b>Frame groups:</b></div>
-                <div class="frames-type-container" id="frames-type-container"></div>
-            </div>
 
+        <div class="frames-type-selector">
             <div class="animation-type-selector">
                 <div class="selector-header">
-                    <b>Frame ordering:</b>
-                    <select id="full-animation-type">
+                    <b>Preset:</b>
+                    <select id="full-animation-type" disabled>
                         <option value="loop">Loop</option>
                         <option value="loop_backwards">Loop backwards</option>
                         <option value="pingpong">Pingpong</option>
@@ -954,20 +974,29 @@
 
             <div class="frame-editor">
                 <div><b>Current Animation Frames:</b></div>
+                <small>Drag frames here to reorder them, or drag one in from Available Frames below.</small>
                 <div class="frames-container" id="full-current-frames"></div>
                 <div class="edit-controls">
-                    <button id="full-apply-changes">Preview</button>
                     <button id="full-clear-frames" class="secondary">Clear</button>
                 </div>
             </div>
+        </div>
+
+        <div><b>Frames:</b></div>
+        <div class="frames-type-selector">
             <div class="available-frames">
-                <div><b>Available Frames (click to add):</b></div>
+                <div><b>Available Frames (click or drag to add):</b></div>
+                <small>You can drag a frame up into Current Animation Frames, or just click it to add it at the end.</small>
                 <div class="frames-container" id="full-available-frames"></div>
+            </div>
+
+            <div class="frames-type-selector">
+                <div><b>Frame groups:</b></div>
+                <div class="frames-type-container" id="frames-type-container"></div>
             </div>
         </div>
 
         <div class="edit-controls">
-            <button id="full-apply-changes">Preview</button>
             <button id="full-save-changes">Save & Close</button>
             <button id="full-cancel-changes" class="secondary">Cancel</button>
         </div>
@@ -1112,7 +1141,214 @@
         let pendingFileDeletions = [];
         let originalExpressionState = null;
         let dropIndicator = null;
+        let draggedFrameElement = null; // an existing .frame-item being reordered within "Current Animation Frames"
+        let draggedAvailableFrame = null; // a .frame-item from "Available Frames" being dragged in to add it
+
+        // Adds drag-to-reorder support to a .frame-item used in the "Current
+        // Animation Frames" list. Actual reordering of the DOM (and therefore
+        // the saved sequence) happens via the container-level dragover/drop
+        // handlers set up in setupCurrentFramesReordering().
+        function attachFrameReorderHandlers(el) {
+            el.addEventListener('dragstart', (e) => {
+                draggedFrameElement = el;
+                el.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', el.dataset.frame || '');
+            });
+            el.addEventListener('dragend', () => {
+                el.classList.remove('dragging');
+                draggedFrameElement = null;
+                const container = document.getElementById('full-current-frames');
+                if (container) clearFrameDragIndicators(container);
+            });
+        }
+
+        // Finds the element the dragged item should be inserted before, based
+        // on cursor position. Groups items into rows first (since the list
+        // wraps in a flex grid), picks the row nearest the cursor's Y, then
+        // finds the first item in that row whose horizontal center is past
+        // the cursor. This is deterministic for a given (x, y) and item set,
+        // which matters because we only call it once per drop (see note in
+        // setupCurrentFramesReordering about why we don't move the DOM live
+        // during dragover).
+        function getFrameDragAfterElement(container, x, y) {
+            const items = [...container.querySelectorAll('.frame-item:not(.dragging)')];
+            if (items.length === 0) return null;
+
+            const rows = [];
+            items.forEach(item => {
+                const box = item.getBoundingClientRect();
+                const centerY = box.top + box.height / 2;
+                let row = rows.find(r => Math.abs(r.centerY - centerY) < box.height / 2);
+                if (!row) {
+                    row = { centerY, items: [] };
+                    rows.push(row);
+                }
+                row.items.push(item);
+            });
+
+            let targetRow = rows[0];
+            let minRowDist = Infinity;
+            rows.forEach(row => {
+                const dist = Math.abs(row.centerY - y);
+                if (dist < minRowDist) {
+                    minRowDist = dist;
+                    targetRow = row;
+                }
+            });
+
+            const rowItems = targetRow.items.slice().sort((a, b) =>
+                a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+
+            for (const item of rowItems) {
+                const box = item.getBoundingClientRect();
+                const centerX = box.left + box.width / 2;
+                if (x < centerX) return item;
+            }
+
+            // Cursor is past every item in this row: insert after the last one.
+            return rowItems[rowItems.length - 1].nextElementSibling;
+        }
+
+        // Clears the visual "drop here" indicator left over from dragover.
+        function clearFrameDragIndicators(container) {
+            container.querySelectorAll('.frame-item.drag-insert-before, .frame-item.drag-insert-after')
+                .forEach(el => el.classList.remove('drag-insert-before', 'drag-insert-after'));
+        }
+
+        // If the "Current Animation Frames" preset isn't already "Custom
+        // sequence", switches to it and seeds the container with a sensible
+        // baseline (the expression's original custom sequence if it had one,
+        // otherwise whatever auto-generated frames are currently shown) so
+        // adding/reordering a frame doesn't discard the existing animation.
+        function ensureCustomSequenceBaseline(container) {
+            const animationTypeSelect = document.getElementById('full-animation-type');
+            if (animationTypeSelect.value === 'custom') return;
+
+            animationTypeSelect.value = 'custom';
+
+            const autoFrames = Array.from(container.children).map(el => parseInt(el.dataset.frame));
+            container.innerHTML = '';
+
+            const framesDef = config.frames.find(f => f.name === currentExpression.frames);
+            if (Array.isArray(originalExpressionState.animation)) {
+                generateCustomFramesFromArray(originalExpressionState.animation, framesDef, container, true);
+            } else if (autoFrames.length > 0) {
+                generateCustomFramesFromArray(autoFrames, framesDef, container, true);
+            }
+        }
+
+        // Builds a "Current Animation Frames" chip (with remove button and
+        // reorder handlers) from either an existing chip (reorder path isn't
+        // relevant here) or an "Available Frames" source chip being added.
+        function buildCurrentFrameItem(sourceElement) {
+            const cloned = sourceElement.cloneNode(true);
+            cloned.draggable = true;
+            cloned.innerHTML += `<button class="remove-btn">×</button>`;
+            cloned.querySelector('.remove-btn').addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                cloned.remove();
+                triggerLivePreview();
+            });
+            attachFrameReorderHandlers(cloned);
+            cloned.dataset.frame = sourceElement.dataset.frame;
+            return cloned;
+        }
+
+        // Wires up drag-to-reorder AND drag-to-add on the "Current Animation
+        // Frames" container itself. Called once at load time since the
+        // container node persists across re-renders (only its contents are
+        // replaced).
+        //
+        // IMPORTANT: the actual DOM move only happens on "drop", not on every
+        // "dragover". This list uses a wrapping flex layout, so moving an item
+        // mid-drag reflows every sibling's position — which then feeds back
+        // into the next dragover's position calculation, and the item ends up
+        // oscillating between two spots (this was the "keeps switching
+        // positions" bug). Only mutating once, at drop time, avoids the
+        // feedback loop entirely. During dragover we just show a thin
+        // indicator of where the item would land.
+        function setupCurrentFramesReordering() {
+            const container = document.getElementById('full-current-frames');
+            if (!container) return;
+
+            container.addEventListener('dragover', (e) => {
+                if (!draggedFrameElement && !draggedAvailableFrame) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = draggedFrameElement ? 'move' : 'copy';
+
+                const afterElement = getFrameDragAfterElement(container, e.clientX, e.clientY);
+                clearFrameDragIndicators(container);
+                if (afterElement && afterElement !== draggedFrameElement) {
+                    afterElement.classList.add('drag-insert-before');
+                } else if (!afterElement) {
+                    const items = container.querySelectorAll('.frame-item:not(.dragging)');
+                    const last = items[items.length - 1];
+                    if (last) last.classList.add('drag-insert-after');
+                }
+            });
+
+            container.addEventListener('dragleave', (e) => {
+                // Only clear once the cursor actually leaves the container (not
+                // just moving between children, which also fires dragleave).
+                if (!container.contains(e.relatedTarget)) {
+                    clearFrameDragIndicators(container);
+                }
+            });
+
+            container.addEventListener('drop', (e) => {
+                if (!draggedFrameElement && !draggedAvailableFrame) return;
+                e.preventDefault();
+                clearFrameDragIndicators(container);
+
+                const animationTypeSelect = document.getElementById('full-animation-type');
+
+                if (draggedFrameElement) {
+                    const afterElement = getFrameDragAfterElement(container, e.clientX, e.clientY);
+                    if (afterElement == null) {
+                        container.appendChild(draggedFrameElement);
+                    } else if (afterElement !== draggedFrameElement) {
+                        container.insertBefore(draggedFrameElement, afterElement);
+                    }
+
+                    // Dragging to reorder only makes sense for an explicit
+                    // sequence, so switch the preset if it isn't already there
+                    // (mirrors what clicking an available frame does).
+                    if (animationTypeSelect && animationTypeSelect.value !== 'custom') {
+                        animationTypeSelect.value = 'custom';
+                    }
+                    triggerLivePreview();
+                } else if (draggedAvailableFrame) {
+                    ensureCustomSequenceBaseline(container);
+
+                    // Recompute against the post-baseline DOM: ensureCustomSequenceBaseline
+                    // may have just rebuilt the container's contents from scratch.
+                    const afterElement = getFrameDragAfterElement(container, e.clientX, e.clientY);
+                    const newItem = buildCurrentFrameItem(draggedAvailableFrame);
+                    if (afterElement) {
+                        container.insertBefore(newItem, afterElement);
+                    } else {
+                        container.appendChild(newItem);
+                    }
+
+                    draggedAvailableFrame = null;
+                    triggerLivePreview();
+                }
+            });
+        }
         let editingFrameGroup = null; // New variable to track the frame group being edited
+
+        // Maps a stripped (leading-slash-free) image path to a version/timestamp
+        // used to defeat browser image caching right after a pixel edit is saved,
+        // so thumbnails and previews always show the freshly uploaded PNG.
+        let frameImageVersion = {};
+
+        function bustedSrc(path) {
+            if (!path) return path;
+            const stripped = path.startsWith('/') ? path.slice(1) : path;
+            const v = frameImageVersion[stripped];
+            return v ? `${stripped}?v=${v}` : stripped;
+        }
 
         // Function to set and animate an expressionif
         function setExpression(expressionIndex) {
@@ -1208,7 +1444,7 @@
                 
                 if (imagePath){
 
-                    const result = imagePath.startsWith("/") ? imagePath.slice(1) : imagePath;
+                    const result = bustedSrc(imagePath);
 
                     isImageLoaded = false;
 
@@ -1243,37 +1479,6 @@
             });
         }
 
-        function updateExpressionDetails(expressionIndex) {
-            const expression = config.expressions[expressionIndex];
-
-            const detailsContainer = document.getElementById('config-details');
-            const editorContainer = document.getElementById('frame-editor-container');
-
-            let detailsHTML = `
-                <div class="expression-detail">
-                    <div><strong>Name:</strong> ${expression.name || 'Unnamed'}</div>
-                    <div><strong>Frames:</strong> ${expression.frames}</div>
-                    <div><strong>Duration:</strong> ${expression.duration || 'Default'} ms</div>
-                    <div><strong>Transition:</strong> ${expression.transition ? 'Yes' : 'No'}</div>
-                    <div><strong>Hidden:</strong> ${expression.hidden ? 'Yes' : 'No'}</div>
-            `;
-
-            if (Array.isArray(expression.animation)) {
-                detailsHTML += `<div><strong>Animation Sequence:</strong> [${expression.animation.join(', ')}]</div>`;
-            } else {
-                detailsHTML += `<div><strong>Animation Type:</strong> ${expression.animation}</div>`;
-            }
-
-            detailsHTML += `<button id="edit-frames" style="margin-top: 10px;">Edit Frames</button></div>`; //<button id="preview-lua" onclick="sendPreviewLua(` + expressionIndex + `)">Preview on Proto</button>
-            detailsContainer.innerHTML = detailsHTML;
-
-            // Set up edit button
-            document.getElementById('edit-frames').addEventListener('click', () => {
-                document.body.classList.add('full-edit-mode');
-                showFullFrameEditor(expressionIndex);
-            });
-        }
-
         function createFrameElement(idxFrame, frameNumber, framesDef, isFullEditor = false, addRmButton = false) {
             const frameElement = document.createElement('div');
             frameElement.className = 'frame-item';
@@ -1300,7 +1505,7 @@
             }
 
             // Rest of the function remains the same...
-            const result = imagePath.startsWith("/") ? imagePath.slice(1) : imagePath;
+            const result = imagePath ? bustedSrc(imagePath) : imagePath;
 
             var str = `
                 <img src="${result}" alt="Frame ${idxFrame}" loading="lazy" onerror="this.style.display='none'">
@@ -1315,13 +1520,28 @@
                 frameElement.querySelector('.remove-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
                     frameElement.remove();
+                    triggerLivePreview();
                 });
+                attachFrameReorderHandlers(frameElement);
             } else {
                 frameElement.addEventListener('click', (e) => {
                     e.currentTarget = frameElement;
                     // Pass the 1-based frame ID for custom list building
                     e.frameNumber = idxFrame; 
                     handlePressAddFrame(e);
+                });
+
+                // Also allow dragging an available frame straight into
+                // "Current Animation Frames" to add it at the drop position.
+                frameElement.addEventListener('dragstart', (e) => {
+                    draggedAvailableFrame = frameElement;
+                    e.dataTransfer.effectAllowed = 'copy';
+                    e.dataTransfer.setData('text/plain', String(idxFrame));
+                });
+                frameElement.addEventListener('dragend', () => {
+                    draggedAvailableFrame = null;
+                    const container = document.getElementById('full-current-frames');
+                    if (container) clearFrameDragIndicators(container);
                 });
             }
 
@@ -1365,6 +1585,9 @@
             animationTypeSelect.value = animationValue;
             durationInput.value = expression.duration || '';
 
+            // Keep the preset selector disabled until a frame group is actually selected
+            animationTypeSelect.disabled = !framesDef;
+
             // Populate frames type selector
             framesTypeContainer.innerHTML = '';
             config.frames.forEach(frameType => {
@@ -1374,6 +1597,23 @@
                 typeElement.dataset.framesType = frameType.name;
 
                 typeElement.addEventListener('click', () => {
+                    const previousActiveItem = document.querySelector('.frames-type-item.active');
+                    const isChangingGroup = previousActiveItem && previousActiveItem.dataset.framesType !== frameType.name;
+                    let erasedForGroupChange = false;
+
+                    if (isChangingGroup) {
+                        const confirmed = confirm('Changing the frame group will erase the animation frames currently defined for this expression. Continue?');
+                        if (!confirmed) return;
+
+                        // Old frame numbers/positions won't line up with the new
+                        // group, so wipe the existing animation instead of
+                        // carrying over stale/invalid frame references.
+                        currentFramesContainer.innerHTML = '';
+                        expression.animation = 'auto';
+                        animationTypeSelect.value = 'loop';
+                        erasedForGroupChange = true;
+                    }
+
                     // Update active frames type
                     document.querySelectorAll('.frames-type-item').forEach(item => {
                         item.classList.remove('active');
@@ -1383,13 +1623,19 @@
                     // Update expression frames type
                     expression.frames = frameType.name;
 
+                    // A frame group is now selected, so the preset selector can be used
+                    animationTypeSelect.disabled = false;
 
                     // Regenerate auto frames with new frame definition (resets sequence to auto if not custom)
-                    const currentMode = Array.isArray(originalExpressionState.animation) ? 'custom' : animationTypeSelect.value;
+                    const currentMode = erasedForGroupChange ?
+                        'loop' :
+                        (Array.isArray(originalExpressionState.animation) ? 'custom' : animationTypeSelect.value);
                     generateAutoFrames(currentMode, expression, true);
                     
                     // Regenerate available frames
                     generateAvailableFrames(expression, true);
+
+                    triggerLivePreview();
                 });
 
                 // Make draggable for reordering (not used in this UI but kept for completeness)
@@ -1411,25 +1657,30 @@
             // Set up controls
             document.getElementById('full-clear-frames').onclick = () => {
                 currentFramesContainer.innerHTML = '';
+                triggerLivePreview();
             };
 
             animationTypeSelect.onchange = () => {
                 generateAutoFrames(animationTypeSelect.value, expression, true);
+                triggerLivePreview();
             };
 
-            document.getElementById('full-apply-changes').onclick = () => {
-                saveExpressionChanges(expression, true, false);
-                updateExpressionDetails(expressionIndex)
-            };
+            // Any field change updates the live preview and restarts the animation
+            expressionNameInput.oninput = () => triggerLivePreview();
+            transitionCheckbox.onchange = () => triggerLivePreview();
+            hiddenCheckbox.onchange = () => triggerLivePreview();
+            durationInput.oninput = () => triggerLivePreview();
 
             document.getElementById('full-save-changes').onclick = () => {
                 saveExpressionChanges(expression, true, true);
-                updateExpressionDetails(expressionIndex)
             };
 
             document.getElementById('full-cancel-changes').onclick = () => {
                 closeFullEditor(true);
             };
+
+            // Show the initial state right away
+            triggerLivePreview();
         }
 
         function generateAvailableFrames(expression, isFullEditor = false) {
@@ -1574,7 +1825,7 @@
             document.body.classList.remove('full-edit-mode');
         }
 
-        function saveExpressionChanges(expression, isFullEditor = false, shouldClose = false) {
+        function saveExpressionChanges(expression, isFullEditor = false, shouldClose = false, silent = false) {
             const currentFramesContainer = isFullEditor ?
                 document.getElementById('full-current-frames') :
                 document.getElementById('current-frames');
@@ -1596,7 +1847,7 @@
 
             const activeItem = document.querySelector('.frames-type-item.active');
             if (!activeItem) {
-                alert('Please select a frame group');
+                if (!silent) alert('Please select a frame group');
                 return;
             }
             const activeFramesType = activeItem.dataset.framesType;
@@ -1604,7 +1855,7 @@
             // Get frame definition
             const framesDef = config.frames.find(f => f.name === activeFramesType);
             if (!framesDef) {
-                alert('Selected frame group not found');
+                if (!silent) alert('Selected frame group not found');
                 return;
             }
 
@@ -1647,14 +1898,16 @@
                 });
 
                 if (invalidFrames.length > 0) {
-                    let rangeText;
-                    if (framesDef.files) {
-                        rangeText = `1-${framesDef.files.length}`;
-                    } else {
-                        rangeText = `${framesDef.from}-${framesDef.to}`;
-                    }
+                    if (!silent) {
+                        let rangeText;
+                        if (framesDef.files) {
+                            rangeText = `1-${framesDef.files.length}`;
+                        } else {
+                            rangeText = `${framesDef.from}-${framesDef.to}`;
+                        }
 
-                    alert(`Invalid frames detected: ${invalidFrames.join(', ')}\nThese frames are outside the valid range (${rangeText}).`);
+                        alert(`Invalid frames detected: ${invalidFrames.join(', ')}\nThese frames are outside the valid range (${rangeText}).`);
+                    }
                     return;
                 }
 
@@ -1669,10 +1922,13 @@
             
 
             // Update display and restart animation
-            if (!isFullEditor) {
-                updateExpressionDetails(currentEditing);
-            }
             setExpression(currentEditing);
+
+            // Flash a brief glow near the preview's edge to show it just updated
+            // (skip when closing, since the preview is about to disappear anyway)
+            if (isFullEditor && !shouldClose) {
+                flashPreviewGlow();
+            }
 
             // Close editor if requested
             if (shouldClose) {
@@ -1681,59 +1937,37 @@
             }
         }
 
+        // Called whenever a field in the Expressions Editor changes, so the
+        // live preview always reflects the current in-progress edits. Silent:
+        // doesn't alert on validation issues (e.g. no frame group chosen yet),
+        // it just skips the update until the state is valid again.
+        function triggerLivePreview() {
+            if (!currentExpression) return;
+            saveExpressionChanges(currentExpression, true, false, true);
+        }
+
+        function flashPreviewGlow() {
+            const container = document.getElementById('image-container');
+            if (!container) return;
+            container.classList.remove('preview-flash');
+            // Force a reflow so the animation restarts even if it's already mid-flash
+            void container.offsetWidth;
+            container.classList.add('preview-flash');
+        }
+
         function handlePressAddFrame(e) {
             preventDefault(e);
-            const container = document.getElementById('full-current-frames')
-            
+            const container = document.getElementById('full-current-frames');
+
             // The item being clicked in the available frames list
             const clickedFrameElement = e.currentTarget;
 
-            // Clone the element and update it for the current frames list
-            let cloned = clickedFrameElement.cloneNode(true);
-            cloned.draggable = true;
-            
-            // Re-add the remove button logic
-            cloned.innerHTML += `<button class="remove-btn">×</button>`;
-            cloned.querySelector('.remove-btn').addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                cloned.remove();
-            });
-            
-            // Remove the click listener that adds it to the list
-            cloned.replaceWith(cloned);
-            
-            // Use the data-frame from the clicked element (1-based frame ID)
-            cloned.dataset.frame = clickedFrameElement.dataset.frame;
+            ensureCustomSequenceBaseline(container);
 
+            const cloned = buildCurrentFrameItem(clickedFrameElement);
+            container.appendChild(cloned);
 
-            const animationTypeSelect = document.getElementById('full-animation-type');
-
-            if (animationTypeSelect.value != 'custom') {
-                // If not in custom mode, switch to custom mode and replace the auto-generated frames with the original animation if available
-                animationTypeSelect.value = 'custom';
-                
-                // Get the current auto-generated frames before replacing them
-                const autoFrames = Array.from(container.children).map(el => parseInt(el.dataset.frame));
-                container.innerHTML = '';
-                
-                // If original state was also auto/loop, use the newly generated list as a base for custom.
-                if (Array.isArray(originalExpressionState.animation)) {
-                    // If the expression originally had a custom array, restore that
-                    generateCustomFramesFromArray(originalExpressionState.animation, config.frames.find(f => f.name === currentExpression.frames), container, true);
-                } else if (autoFrames.length > 0) {
-                    // If it was auto, use the auto-generated sequence as the base
-                    generateCustomFramesFromArray(autoFrames, config.frames.find(f => f.name === currentExpression.frames), container, true);
-                } else {
-                    // Otherwise, just clear it (it should already be cleared)
-                    container.innerHTML = '';
-                }
-
-                // Add the newly clicked frame
-                container.appendChild(cloned);
-            } else {
-                // Already in custom mode, just append the new frame
-                container.appendChild(cloned);
-            }
+            triggerLivePreview();
         }
 
         function preventDefault(e) {
@@ -1782,11 +2016,34 @@
             // Set the new expression as active and open editor
             const newIndex = config.expressions.length - 1;
             setExpression(newIndex);
-            updateExpressionDetails(newIndex);
 
             // Open editor
             document.body.classList.add('full-edit-mode');
             showFullFrameEditor(newIndex);
+        }
+
+        // Turns an expression's animation value into a short readable summary,
+        // truncating custom sequences longer than 20 frames.
+        function formatAnimationSummary(expression) {
+            if (Array.isArray(expression.animation)) {
+                const seq = expression.animation;
+                const shown = seq.slice(0, 20).join(', ');
+                return seq.length > 20 ?
+                    `[${shown}, …] (${seq.length} frames)` :
+                    `[${shown}]`;
+            }
+            const labels = {
+                auto: 'Loop',
+                loop: 'Loop',
+                auto_backwards: 'Loop backwards',
+                loop_backwards: 'Loop backwards',
+                pingpong: 'Pingpong'
+            };
+            return labels[expression.animation] || expression.animation || 'Unset';
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
         function renderExpressions() {
@@ -1808,12 +2065,18 @@
                     details = `(${expression.frames}${framesDef && framesDef.files ? ' - Files' : ''})`;
                 }
 
+                const sequenceText = escapeHtml(formatAnimationSummary(expression));
+                const delayText = expression.duration ? `${expression.duration} ms` : 'Default';
+
                 expressionElement.innerHTML = `
                     <div>
                         <div class="expression-name">${expression.name || 'Unnamed Expression'}</div>
                         <div class="expression-details">${details}</div>
+                        <div class="expression-details">Sequence: ${sequenceText}</div>
+                        <div class="expression-details">Delay: ${delayText}</div>
                     </div>
                     <div class="expression-controls">
+                        <button class="secondary edit-expression-btn">Edit</button>
                         <button class="move-up-btn" ${index === 0 ? 'disabled' : ''}>↑</button>
                         <button class="move-down-btn" ${index === config.expressions.length - 1 ? 'disabled' : ''}>↓</button>
                         <button class="danger delete-btn">Delete</button>
@@ -1824,13 +2087,19 @@
                     // Don't set expression if clicking on controls
                     if (!e.target.classList.contains('move-up-btn') &&
                         !e.target.classList.contains('move-down-btn') &&
-                        !e.target.classList.contains('delete-btn')) {
+                        !e.target.classList.contains('delete-btn') &&
+                        !e.target.classList.contains('edit-expression-btn')) {
                         setExpression(index);
-                        updateExpressionDetails(index);
                     }
                 });
 
                 // Add control event listeners
+                expressionElement.querySelector('.edit-expression-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.body.classList.add('full-edit-mode');
+                    showFullFrameEditor(index);
+                });
+
                 expressionElement.querySelector('.move-up-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
                     moveExpression(index, 'up');
@@ -2039,14 +2308,12 @@
                     [config.expressions[index], config.expressions[index - 1]];
                 renderExpressions();
                 setExpression(index - 1);
-                updateExpressionDetails(index - 1);
             } else if (direction === 'down' && index < config.expressions.length - 1) {
                 // Swap with next expression
                 [config.expressions[index], config.expressions[index + 1]] =
                     [config.expressions[index + 1], config.expressions[index]];
                 renderExpressions();
                 setExpression(index + 1);
-                updateExpressionDetails(index + 1);
             }
         }
 
@@ -2062,15 +2329,12 @@
             config.expressions.splice(index, 1);
             renderExpressions();
 
-            // If we deleted the last expression, clear the details panel
             if (config.expressions.length === 0) {
-                document.getElementById('config-details').innerHTML = '<p>No expressions available</p>';
                 document.getElementById('image-display').src = '';
             } else {
                 // Set the new expression at this position (or previous if at end)
                 const newIndex = Math.min(index, config.expressions.length - 1);
                 setExpression(newIndex);
-                updateExpressionDetails(newIndex);
             }
         }
 
@@ -2107,8 +2371,7 @@
                 }
                 
                 if (firstFramePath) {
-                    previewImg.src = firstFramePath.startsWith('/') ?
-                        firstFramePath.substring(1) : firstFramePath;
+                    previewImg.src = bustedSrc(firstFramePath);
                     previewImg.alt = `Preview of ${frameDef.name}`;
                     previewImg.onerror = function () {
                         this.src = '';
@@ -2228,7 +2491,6 @@
             if (config.expressions.length > 0) {
                 const newActiveIndex = Math.min(activeExpressionIndex, config.expressions.length - 1);
                 setExpression(newActiveIndex);
-                updateExpressionDetails(newActiveIndex);
             }
         }
 
@@ -2274,17 +2536,25 @@
             
             // Handle file input visibility/state
             document.getElementById('frame-files').value = '';
-            document.getElementById('frame-files').disabled = isEditing;
-            document.getElementById('add-frames-to-group').disabled = isEditing;
-            document.getElementById('clear-frames-to-group').disabled = isEditing;
-            document.getElementById('frame-editor-note').style.display = isEditing ? 'block' : 'none';
+            selectedFiles = [];
+            const selectedFilesListEl = document.getElementById('selected-files-list');
+            // In editing mode, newly picked files are shown merged into the
+            // "Existing frames" list below instead of a separate box here.
+            selectedFilesListEl.style.display = isEditing ? 'none' : 'block';
+            selectedFilesListEl.innerHTML = isEditing ? '' : '<p>No files selected</p>';
 
+            document.getElementById('frame-editor-note').style.display = isEditing ? 'block' : 'none';
+            document.getElementById('frame-editor-note').textContent = isEditing ?
+                'Note: New files you add here appear below alongside the existing frames (marked "New") until you hit Save. For pattern-based groups, they\'ll be saved and numbered following the group\'s existing naming pattern.' :
+                '';
+
+            const existingSection = document.getElementById('existing-frames-section');
             if (isEditing) {
-                selectedFiles = [];
+                existingSection.style.display = 'block';
                 renderEditableFrameFilesList(frameDef);
             } else {
-                selectedFiles = [];
-                document.getElementById('selected-files-list').innerHTML = '<p>No files selected</p>';
+                existingSection.style.display = 'none';
+                document.getElementById('existing-frames-list').innerHTML = '';
             }
 
             // Remove existing listener before adding to prevent duplicates
@@ -2292,8 +2562,13 @@
             document.getElementById('frame-files').addEventListener('change', handleFileSelect);
         }
 
+        function attemptAddFrames() {
+            document.getElementById('frame-files').click();
+        }
+
         function handleFileSelect(event) {
-            // ... (keep the original handleFileSelect logic as it is only used for creation)
+            const isEditing = !!editingFrameGroup;
+
             const newFiles = Array.from(event.target.files).filter(file =>
                 file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')
             );
@@ -2308,10 +2583,12 @@
             }
 
             const filesList = document.getElementById('selected-files-list');
-            filesList.innerHTML = '<p>Loading and validating images...</p>';
+            if (!isEditing) {
+                filesList.innerHTML = '<p>Loading and validating images...</p>';
+            }
 
             if (newFiles.length === 0) {
-                filesList.innerHTML = '<p>No PNG files selected</p>';
+                if (!isEditing) filesList.innerHTML = '<p>No PNG files selected</p>';
                 return;
             }
 
@@ -2341,6 +2618,13 @@
                         const dataTransfer = new DataTransfer();
                         validFiles.forEach(file => dataTransfer.items.add(file));
                         event.target.files = dataTransfer.files;
+                    }
+
+                    if (isEditing) {
+                        // Merge newly picked files straight into the existing frames
+                        // list below, rather than a separate preview box.
+                        renderEditableFrameFilesList(editingFrameGroup);
+                        return;
                     }
 
                     if (validFiles.length === 0) {
@@ -2474,7 +2758,12 @@
         function clearSelectedFiles() {
             selectedFiles = [];
             document.getElementById('frame-files').value = '';
-            document.getElementById('selected-files-list').innerHTML = '<p>No files selected</p>';
+            const isEditing = !!editingFrameGroup;
+            if (isEditing) {
+                renderEditableFrameFilesList(editingFrameGroup);
+            } else {
+                document.getElementById('selected-files-list').innerHTML = '<p>No files selected</p>';
+            }
         }
         
         async function uploadFrameFiles() {
@@ -2511,6 +2800,130 @@
                 frameDef.flip_right = flipRight;
                 frameDef.color_scheme_left = colorLeft;
                 frameDef.color_scheme_right = colorRight;
+
+                // If the user selected new files to append, upload them now.
+                // Files-based groups append to the 'files' array in whatever
+                // order they were selected. Pattern-based groups get each new
+                // file saved under the next number(s) in the sequence, following
+                // the group's existing pattern/from/to naming convention.
+                if (selectedFiles.length > 0) {
+                    const isPatternBased = !!(frameDef.pattern && frameDef.from !== undefined && frameDef.to !== undefined);
+
+                    if (!isPatternBased && !frameDef.files) {
+                        alert('This frame group has neither a file list nor a numbered pattern defined, so new frames can\'t be added automatically. Please fix its definition first.');
+                    } else {
+                        const progressDiv = document.getElementById('upload-progress');
+                        const progressBar = document.getElementById('upload-progress-bar');
+                        const uploadCount = document.getElementById('upload-count');
+                        const uploadStatus = document.getElementById('upload-status');
+
+                        progressDiv.style.display = 'block';
+                        progressBar.value = 0;
+                        uploadCount.textContent = `0/${selectedFiles.length}`;
+                        uploadStatus.textContent = '';
+
+                        let successCount = 0;
+                        const errors = [];
+                        const uploadedFiles = []; // used for files-based groups only
+                        let nextPatternNumber = isPatternBased ? frameDef.to + 1 : null;
+                        let stoppedEarly = false;
+
+                        for (let i = 0; i < selectedFiles.length; i++) {
+                            const file = selectedFiles[i];
+
+                            let uploadDir, uploadFilename, fullUploadPath;
+                            if (isPatternBased) {
+                                fullUploadPath = sprintf(frameDef.pattern, nextPatternNumber);
+                                const normalized = fullUploadPath.startsWith('/') ? fullUploadPath : '/' + fullUploadPath;
+                                uploadDir = normalized.substring(0, normalized.lastIndexOf('/'));
+                                uploadFilename = normalized.substring(normalized.lastIndexOf('/') + 1);
+                            } else {
+                                uploadDir = `/expressions/${className}`;
+                                uploadFilename = file.name;
+                                fullUploadPath = `${uploadDir}/${uploadFilename}`;
+                            }
+
+                            uploadCount.textContent = `${i + 1}/${selectedFiles.length}`;
+                            progressBar.value = (i / selectedFiles.length) * 100;
+
+                            try {
+                                const formData = new FormData();
+                                formData.append('path', uploadDir);
+                                formData.append('file', file, uploadFilename);
+
+                                const response = await fetch('/upload', {
+                                    method: 'POST',
+                                    body: formData
+                                });
+
+                                if (!response.ok) {
+                                    const errorText = await response.text();
+                                    throw new Error(errorText || `HTTP error! status: ${response.status}`);
+                                }
+
+                                const result = await response.text();
+                                if (result === "" || result.includes("success\": true") || result.includes("success")) {
+                                    successCount++;
+                                    if (isPatternBased) {
+                                        nextPatternNumber++;
+                                    } else {
+                                        uploadedFiles.push(fullUploadPath);
+                                    }
+                                } else {
+                                    throw new Error(result || 'Unknown server response');
+                                }
+                            } catch (error) {
+                                console.error('Upload error:', error);
+                                if (error.message.includes("200") || error.message === "") {
+                                    successCount++;
+                                    if (isPatternBased) {
+                                        nextPatternNumber++;
+                                    } else {
+                                        uploadedFiles.push(fullUploadPath);
+                                    }
+                                } else {
+                                    errors.push(`Failed to upload ${uploadFilename}: ${error.message}`);
+                                    // For pattern-based groups the numbering must stay contiguous
+                                    // (from..to), so stop instead of leaving a gap.
+                                    if (isPatternBased) {
+                                        stoppedEarly = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        progressBar.value = 100;
+
+                        if (errors.length > 0) {
+                            const skippedNote = stoppedEarly && selectedFiles.length - successCount > 1 ?
+                                ` Stopped after the first failure to avoid gaps in the numbered sequence; ${selectedFiles.length - successCount - 1} remaining file(s) were not attempted.` :
+                                '';
+                            uploadStatus.innerHTML = `<span style="color: red;">${successCount} files uploaded successfully, ${errors.length} failed:</span><br>${errors.join('<br>')}${skippedNote}`;
+                        } else {
+                            uploadStatus.innerHTML = `<span style="color: green;">All ${selectedFiles.length} files uploaded successfully!</span>`;
+                        }
+
+                        // Persist whichever kind of frame group this is
+                        if (isPatternBased) {
+                            frameDef.to = nextPatternNumber - 1;
+                        } else {
+                            frameDef.files = frameDef.files.concat(uploadedFiles);
+                        }
+                        selectedFiles = [];
+
+                        if (errors.length > 0) {
+                            // Stop here so the user can see the error details; don't close the panel.
+                            frameClassesModified = true;
+                            renderFrameClassesDefinitions();
+                            if (currentExpression && currentExpression.frames === frameDef.name) {
+                                setExpression(activeExpressionIndex);
+                            }
+                            renderEditableFrameFilesList(frameDef);
+                            return;
+                        }
+                    }
+                }
                 
                 // Re-find the frameDef in the array (in case it was re-ordered elsewhere, though unlikely here)
                 const index = config.frames.findIndex(f => f.name === frameDef.name);
@@ -2649,7 +3062,6 @@
                 renderFrameClassesDefinitions();
                 if (config.expressions.length > 0) {
                     setExpression(0);
-                    updateExpressionDetails(0);
                 }
             } catch (e) {
                 console.error('Error loading config:', e);
@@ -3096,18 +3508,28 @@
 
         // Renders the thumbnail list of individual frames inside an existing
         // frame group, each clickable to open the pixel editor for that frame.
+        // For files-based groups, thumbnails are also drag-reorderable.
+        // Also shows any newly picked-but-not-yet-uploaded files (from
+        // `selectedFiles`) merged into the same list, marked "New", so people
+        // see them appear right where the saved frames are instead of in a
+        // separate box.
         function renderEditableFrameFilesList(frameDef) {
-            const container = document.getElementById('selected-files-list');
+            const container = document.getElementById('existing-frames-list');
             container.innerHTML = '';
 
             const frames = getFrameGroupPaths(frameDef);
+            const isReorderable = !!frameDef.files; // only plain file lists can be reordered client-side
+            const isPatternBased = !!(frameDef.pattern && frameDef.from !== undefined && frameDef.to !== undefined);
+            const hasPending = selectedFiles.length > 0;
 
-            if (frames.length === 0) {
+            if (frames.length === 0 && !hasPending) {
                 container.innerHTML = '<p>No frames in this group yet.</p>';
             } else {
                 const intro = document.createElement('p');
                 intro.style.margin = '0 0 10px 0';
-                intro.textContent = 'Click a frame to edit its pixels:';
+                intro.textContent = isReorderable ?
+                    'Drag a frame to reorder it, or click to edit its pixels:' :
+                    'Click a frame to edit its pixels:';
                 container.appendChild(intro);
 
                 const listWrap = document.createElement('div');
@@ -3115,15 +3537,17 @@
                 listWrap.style.flexWrap = 'wrap';
                 listWrap.style.gap = '10px';
 
-                frames.forEach(({ path, frameNumber }) => {
+                let dragSrcIndex = null;
+
+                frames.forEach(({ path, frameNumber }, idx) => {
                     const wrap = document.createElement('div');
                     wrap.className = 'editable-frame-item';
-
-                    const stripped = path.startsWith('/') ? path.slice(1) : path;
+                    wrap.draggable = isReorderable;
+                    wrap.dataset.index = idx;
 
                     const img = document.createElement('img');
                     img.className = 'editable-frame-thumb';
-                    img.src = stripped;
+                    img.src = bustedSrc(path);
                     img.alt = `Frame ${frameNumber}`;
                     img.title = 'Click to edit pixels';
                     img.addEventListener('click', () => openPixelEditor(path, frameDef));
@@ -3144,6 +3568,84 @@
                     wrap.appendChild(img);
                     wrap.appendChild(label);
                     wrap.appendChild(editBtn);
+
+                    if (isReorderable) {
+                        wrap.addEventListener('dragstart', (e) => {
+                            dragSrcIndex = idx;
+                            wrap.classList.add('dragging');
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', String(idx));
+                        });
+                        wrap.addEventListener('dragend', () => {
+                            wrap.classList.remove('dragging');
+                            listWrap.querySelectorAll('.editable-frame-item').forEach(el => el.classList.remove('drag-over'));
+                        });
+                        wrap.addEventListener('dragover', (e) => {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = 'move';
+                            wrap.classList.add('drag-over');
+                        });
+                        wrap.addEventListener('dragleave', () => {
+                            wrap.classList.remove('drag-over');
+                        });
+                        wrap.addEventListener('drop', (e) => {
+                            e.preventDefault();
+                            wrap.classList.remove('drag-over');
+                            const targetIndex = idx;
+                            if (dragSrcIndex === null || dragSrcIndex === targetIndex) return;
+
+                            // Reorder the underlying files array in memory. No server
+                            // call needed: each entry already stores its own path, so
+                            // the animation order is simply the array order.
+                            const moved = frameDef.files.splice(dragSrcIndex, 1)[0];
+                            frameDef.files.splice(targetIndex, 0, moved);
+                            frameClassesModified = true;
+
+                            renderEditableFrameFilesList(frameDef);
+                            renderFrameClassesDefinitions();
+                            if (currentExpression && currentExpression.frames === frameDef.name) {
+                                setExpression(activeExpressionIndex);
+                            }
+                        });
+                    }
+
+                    listWrap.appendChild(wrap);
+                });
+
+                // Newly selected files, not uploaded yet — shown merged into the
+                // same list so people see them where the real frames will land.
+                selectedFiles.forEach((file, pendingIdx) => {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'editable-frame-item pending-frame-item';
+                    wrap.draggable = false;
+                    wrap.style.opacity = '0.7';
+
+                    const img = document.createElement('img');
+                    img.className = 'editable-frame-thumb';
+                    img.style.borderStyle = 'dashed';
+                    img.src = URL.createObjectURL(file);
+                    img.alt = file.name;
+                    img.title = file.name;
+
+                    const label = document.createElement('div');
+                    label.className = 'editable-frame-label';
+                    label.textContent = isPatternBased ?
+                        `New (frame ${frameDef.to + pendingIdx + 1})` :
+                        'New — not saved yet';
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'editable-frame-edit-btn danger';
+                    removeBtn.textContent = 'Remove';
+                    removeBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        selectedFiles.splice(pendingIdx, 1);
+                        renderEditableFrameFilesList(frameDef);
+                    });
+
+                    wrap.appendChild(img);
+                    wrap.appendChild(label);
+                    wrap.appendChild(removeBtn);
                     listWrap.appendChild(wrap);
                 });
 
@@ -3360,12 +3862,12 @@
 
         function refreshImagesForPath(fullPath) {
             const stripped = fullPath.startsWith('/') ? fullPath.slice(1) : fullPath;
-            const bust = Date.now();
+            const newSrc = bustedSrc(fullPath);
             document.querySelectorAll('img').forEach(img => {
                 const src = img.getAttribute('src') || '';
                 const baseSrc = src.split('?')[0];
                 if (baseSrc === stripped) {
-                    img.src = `${stripped}?t=${bust}`;
+                    img.src = newSrc;
                 }
             });
         }
@@ -3434,6 +3936,12 @@
                 frameClassesModified = true;
                 statusEl.textContent = 'Saved!';
 
+                // Bump the cache-busting version for this path FIRST, so every
+                // subsequent render (including the two below) picks up the fresh
+                // image instead of a browser-cached stale one.
+                const stripped = fullPath.startsWith('/') ? fullPath.slice(1) : fullPath;
+                frameImageVersion[stripped] = Date.now();
+
                 // Refresh any on-screen previews using this same path
                 refreshImagesForPath(fullPath);
 
@@ -3500,6 +4008,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', setupPixelEditorEvents);
+        document.addEventListener('DOMContentLoaded', setupCurrentFramesReordering);
     </script>
 </body>
 
