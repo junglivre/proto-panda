@@ -85,9 +85,18 @@ void EditMode::CheckBeginEditMode(){
 
 
   OledScreen::SetConsoleMode(true);
+
+  bool shouldEnter = digitalRead(EDIT_MODE_PIN) == EDIT_ENABLE_LOGIC_LEVEL;
+
+  #ifdef USE_BOOT_PIN_FOR_EDIT_MODE
+  bool bootTriggered = false;
+  if (!shouldEnter && digitalRead(0) == LOW){
+    shouldEnter = true;
+    bootTriggered = true;
+  }
+  #endif
   
-  if (digitalRead(EDIT_MODE_PIN) == EDIT_ENABLE_LOGIC_LEVEL)
-  {
+  if (shouldEnter){
     for (int i = 0; i < 10; i++)
     {
       OledScreen::display.clearDisplay();
@@ -99,7 +108,14 @@ void EditMode::CheckBeginEditMode(){
       
       OledScreen::display.display();
       delay(200);
-      if (digitalRead(EDIT_MODE_PIN) != EDIT_ENABLE_LOGIC_LEVEL)
+      bool shouldLeave = digitalRead(EDIT_MODE_PIN) != EDIT_ENABLE_LOGIC_LEVEL;
+
+      #ifdef USE_BOOT_PIN_FOR_EDIT_MODE
+      if (bootTriggered && digitalRead(0) == HIGH){
+        shouldLeave = true;
+      }
+      #endif
+      if (shouldLeave)
       {
         DoBegin(false);
         return;

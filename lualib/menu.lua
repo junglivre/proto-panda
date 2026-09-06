@@ -92,6 +92,7 @@ function _M.setup(expressions)
     local overlays = require("overlays")
 
     _M.editbutton_state = digitalRead(EDIT_MODE_PIN)
+    _M.bootbutton_state = digitalRead(0)
     
     
     local cfg = configloader.Get()
@@ -646,8 +647,9 @@ end
 function _M.handleMenu(dt)
 
     local mode = digitalRead(EDIT_MODE_PIN)
-    if _M.editbutton_state ~= mode then  
-        if mode == 1 then
+    local modeBoot = digitalRead(0)
+    if _M.editbutton_state ~= mode or _M.bootbutton_state ~= modeBoot then  
+        if mode == 1 or modeBoot == 0 then
             _M.readyToPairCount = false
             if not _M.manualPairing and configloader.Get().edit_mode_cycle_animation == true then  
                 expressions.Next()
@@ -660,7 +662,7 @@ function _M.handleMenu(dt)
         _M.manualPairing = false
         _M.editbutton_state = mode
     end
-    if _M.readyToPairCount and mode == 0 and _M.holdTimer < millis() then  
+    if _M.readyToPairCount and (mode == 0 or modeBoot == 1) and _M.holdTimer < millis() then  
         if getConnectedClientsCount() < drivers.maxClients then
             _M.holdTimer = 999999999
             drivers.beginPairing()

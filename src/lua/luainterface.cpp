@@ -844,6 +844,11 @@ void LuaInterface::RegisterConstants()
 
   m_lua->setConstant("MAX_LED_GROUPS", MAX_LED_GROUPS);
   m_lua->setConstant("EDIT_MODE_PIN", EDIT_MODE_PIN);
+  #ifdef USE_BOOT_PIN_FOR_EDIT_MODE
+  m_lua->setConstant("USE_BOOT_PIN_FOR_EDIT_MODE", 1);
+  #else
+  m_lua->setConstant("USE_BOOT_PIN_FOR_EDIT_MODE", 0);
+  #endif
   #ifdef ENABLE_EDIT_MODE
   m_lua->setConstant("ENABLE_EDIT_MODE", 1);
   #else 

@@ -64,6 +64,9 @@ void setup() {
     #else
       pinMode(EDIT_MODE_PIN, INPUT_PULLUP);
     #endif
+    #ifdef USE_BOOT_PIN_FOR_EDIT_MODE
+        pinMode(0, INPUT_PULLUP); //Boot pin is always plugged in to a high impedance to reach here
+    #endif
   #endif
   #ifdef USE_PIN_BATTERY_IN
     pinMode(PIN_USB_BATTERY_IN, INPUT);
