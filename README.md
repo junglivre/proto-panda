@@ -456,8 +456,19 @@ Well, we have a [guide for making your own protopanda!](./doc/diy-guide.md)
 To control you can:
 * Use a protopanda controller built with a NRF52832.
 * Use an IR controller and write a driver for it.
-* [Buy one of those BLE devices that are compatible and have a driver already](https://pt.aliexpress.com/item/1005008459884910.html?)
 * Write your own solution using the two extra gpios left.
+* Buy an BLE HID device thats compatible.
+
+##### Compatible devices
+
+
+[**Mocute controller**](https://pt.aliexpress.com/item/32962516758.html). Best alternative talking input wise. It works both as mouse/keybooard/joystick. Use in mouse mode or keyboard mode.
+
+[**Lazy tiktok scrolling keypad**](https://pt.aliexpress.com/item/1005008459884910.html). High latency. Its a dumb devide that simulates mouse and keyboard movements to scroll tiktok on your phone. Luckly those movements have been mapped to protopanda input. Best size/formfactor.
+
+[**VRPARK**](https://pt.aliexpress.com/item/32792719676.html). Cheapest and crappiest of them all. Easiest to find. 
+
+If you find a generic HID device like a mouse or keyboard that uses BLE, it should be compatible in some way.
 
 
 # Printing and assembly guide

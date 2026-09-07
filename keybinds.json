@@ -37,12 +37,19 @@
     "panda.buttons.6": "BUTTON_BACK",
     "panda.buttons.7": "BUTTON_AUX_A",
     "panda.buttons.8": "BUTTON_AUX_B",
+
     "joystick.right_hat=5": "BUTTON_LEFT",
     "joystick.right_hat=3": "BUTTON_DOWN",
     "joystick.right_hat=1": "BUTTON_RIGHT",
     "joystick.right_hat=7": "BUTTON_UP",
     "joystick.buttons.4": "BUTTON_CONFIRM",
     "joystick.buttons.1": "BUTTON_BACK",
+
+    "joystick..left_analog_x<-10": "BUTTON_LEFT",
+    "joystick..left_analog_y>10": "BUTTON_DOWN",
+    "joystick..left_analog_x>10": "BUTTON_RIGHT",
+    "joystick..left_analog_y<-7": "BUTTON_UP",
+
     "generic.buttons.4": "BUTTON_LEFT",
     "generic.buttons.1": "BUTTON_DOWN",
     "generic.buttons.3": "BUTTON_RIGHT",

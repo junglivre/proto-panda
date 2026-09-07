@@ -30,6 +30,18 @@ Yes! [Check the configuration guide.](./configuration.md)
 
 ---
 
+**How i change the animation speed?**
+
+[Here](./configuring.md#expressions). You can also simply repeat one frame as many times you want too.
+
+---
+
+**I got a controller, but its not connecting, why?**
+
+Press the boot/internal button for 5s until a screen shows "Waiting for controller".
+
+--
+
 **Do I really need the SD card?**
 
 Yes. Technically its possible to adapt the code to use only internal flash, but that comes with a series of problems and storage space. So stick with the SD card.

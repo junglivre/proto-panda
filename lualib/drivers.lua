@@ -303,7 +303,7 @@ function drivers.onHidCallback(connectionId, controllerId, data)
     local action = ""
     if len == 2 then  
         --Mouse press
-        log("keyboard.button=".. data[1] .. ' -> '.. data[2])
+        log("keyboard.button="..  data[1] .. ' -> '.. data[2])
         local keyboard = drivers.keyboard[controllerId]
         keyboard.button = data[1]
     elseif len == 4 or len == 3 then 
