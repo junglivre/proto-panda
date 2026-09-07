@@ -57,9 +57,11 @@
     "keyboard.button=234": "BUTTON_BACK",
     "keyboard.button=233": "BUTTON_AUX_A",
     "keyboard.button=64": "BUTTON_AUX_B",
-    "mouse.x>25": "BUTTON_LEFT",
-    "mouse.x<-25": "BUTTON_RIGHT",
-    "mouse.y<-25": "BUTTON_UP",
-    "mouse.y>25": "BUTTON_DOWN"
+    "mouse.x>10": "BUTTON_LEFT",
+    "mouse.x<-10": "BUTTON_RIGHT",
+    "mouse.y<-10": "BUTTON_UP",
+    "mouse.y>10": "BUTTON_DOWN",
+    "mouse.buttons.1": "BUTTON_CONFIRM",
+    "mouse.buttons.4": "BUTTON_BACK"
   }
 }

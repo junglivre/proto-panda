@@ -303,7 +303,7 @@ function drivers.onHidCallback(connectionId, controllerId, data)
     local action = ""
     if len == 2 then  
         --Mouse press
-        print("Keyboard press: ", data[1], data[2])
+        log("keyboard.button=", data[1], data[2])
         local keyboard = drivers.keyboard[controllerId]
         keyboard.button = data[1]
     elseif len == 4 or len == 3 then 
@@ -322,32 +322,32 @@ function drivers.onHidCallback(connectionId, controllerId, data)
         mouse.wheel = deltaWheel
 
         if deltaX ~= 0 then  
-            action = action ..('Move_x='..deltaX..' ')
+            action = action ..('mouse.x='..deltaX..' ')
             empty = false
         end
         if deltaY ~= 0 then  
-            action = action ..('Move_y='..deltaY..' ')
+            action = action ..('mouse.y='..deltaY..' ')
             empty = false
         end
         if deltaWheel ~= 0 then  
-            action = action ..('Scroll='..deltaWheel..' ')
+            action = action ..('mouse.wheel='..deltaWheel..' ')
             empty = false
         end
         local mb = mouse.buttons
-        for i=1,8 do  
+        for i=0,7 do  
             local state = buttons & (1 << i) == 0 and 0 or 1
-            if mb[i] ~= state then  
-                action = action ..('button['..i..']='..state..' ')
+            if mb[i+1] ~= state then  
+                action = action ..('mouse.buttons.'..(i+1)..' -> '..state..' ')
                 empty = false
-                mb[i] = state
+                mb[i+1] = state
             end
         end
 
         if action ~= "" then  
-            print(action)
+            log(action)
         end
         if empty then  
-            print("Mouse all zeros.")
+            log("Mouse all zeros.")
         end
         
     elseif len == 5 then  
@@ -381,13 +381,20 @@ function drivers.onHidCallback(connectionId, controllerId, data)
         joystickObject.right_analog_x = data[3] - 127
         joystickObject.right_analog_y = data[4] - 128
 
+        log("Joystick moved: ".. 
+            "  joystickObject.left_hat="..joystickObject.left_hat .. 
+            ", joystickObject.right_hat="..joystickObject.right_hat .. 
+            ", joystickObject.left_analog_x="..joystickObject.left_analog_x..
+            ", joystickObject.left_analog_y="..joystickObject.left_analog_y..
+            ", joystickObject.right_analog_y="..joystickObject.right_analog_y)
+
     else 
-        print("packet size is unknown: "..(#data))
+        
         local str = ""
         for i,b in pairs(data) do
             str = str ..b..', '  
         end
-        print(str)
+        log("Packet size is unknown: "..(#data)..", data is: "..str)
     end
 end
 
