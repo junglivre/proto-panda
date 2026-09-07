@@ -97,13 +97,24 @@ void OledScreen::DrawIcon(int x, int y, int iconId){
     display.drawBitmap(x,y, ic->icon, ic->width, ic->height, 1);
 }
 
-void OledScreen::DrawPanelFaceToScreen(int xx, int yy){
-    display.drawRect(xx,yy,CANVAS_WIDTH+2,CANVAS_HEIGHT+2, 1);
+void OledScreen::DrawPanelFaceToScreen(int xx, int yy, int scale){
+    if (scale <= 0){
+        scale = 1;
+    }
+    display.drawRect(xx, yy, CANVAS_WIDTH * scale + 2, CANVAS_HEIGHT * scale + 2, 1);
+    
     int ptr = 0;
-    for (int y=0;y<CANVAS_HEIGHT;y++){
-      for (int x=0;x<CANVAS_WIDTH;x++){
-        display.drawPixel(xx+x+1, yy+y+1, OledScreen::DisplayFace[OledScreen::screenFlipId%2][ptr++]);
-      }
+    for (int y = 0; y < CANVAS_HEIGHT; y++) {
+        for (int x = 0; x < CANVAS_WIDTH; x++) {
+            uint8_t pixel = OledScreen::DisplayFace[OledScreen::screenFlipId % 2][ptr++];
+            for (int dy = 0; dy < scale; dy++) {
+                for (int dx = 0; dx < scale; dx++) {
+                    display.drawPixel(xx + x * scale + dx + 1, 
+                                    yy + y * scale + dy + 1, 
+                                    pixel);
+                }
+            }
+        }
     }
 }
 

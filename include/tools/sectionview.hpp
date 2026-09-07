@@ -45,6 +45,16 @@ public:
         }
     }
 
+    bool getSize(int id, int& ww, int& hh){
+        if (id >= m_count) {
+            return false;
+        }
+        const View& v = m_views[id];
+        hh = v.h;
+        ww = v.w;
+        return true;
+    }
+
     inline bool getPosition(int x, int y, int& tx, int& ty) const {
         if (m_count == 0) {
             tx = x; ty = y;

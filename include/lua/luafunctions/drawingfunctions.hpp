@@ -33,7 +33,7 @@ void composeBulkFile();
 
 
 
-void DrawPanelFaceToScreen(int x, int y);
+void DrawPanelFaceToScreen(int x, int y, int scale=1);
 void gentlySetPanelBrightness(uint8_t bright, uint8_t rate);
 
 #endif

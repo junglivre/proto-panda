@@ -521,7 +521,7 @@ void LuaInterface::RegisterMethods()
   m_lua->FuncRegister("dictLoad", dictLoad);
   m_lua->FuncRegister("dictFormat", dictFormat);
   //Oleed display internal
-  m_lua->FuncRegister("oledFaceToScreen", DrawPanelFaceToScreen);
+  m_lua->FuncRegisterOptional("oledFaceToScreen", DrawPanelFaceToScreen, 1);
   m_lua->FuncRegister("oledCreateIcon", OledScreen::CreateIcon);
   m_lua->FuncRegister("oledDrawIcon", OledScreen::DrawIcon);
   m_lua->FuncRegister("oledClearScreen", OledScreen::Clear);
@@ -1014,13 +1014,14 @@ bool LuaInterface::Start()
   ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","GetFrameCount",&Sprite::GetFrameCount);
   ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","CreateEmptyTexture",&Sprite::CreateEmptyTexture);
   ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","LoadFromPng",&Sprite::LoadFromPng);
-  ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","CropSprite",&Sprite::CropSprite);
+  ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","CropSprite",&Sprite::CropSprite, false, false);
   ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","Draw",&Sprite::Draw, 1.0f, SHADER_NONE, FlipConfig());
   ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","SetRotation",&Sprite::SetRotation);
   ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","Clone",&Sprite::Clone);
   ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","UseCustomShader",&Sprite::UseCustomShader);
   ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","SetShader",&Sprite::SetShader, 1.0f);
-  ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","setVisibility",&Sprite::setVisibility);
+  ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","setVisibility",&Sprite::SetVisibility);
+  ClassRegister<Model>::RegisterClassMethod(_state,"Sprite","ClearCrop",&Sprite::ClearCrop);
 
 
   //Created only using loadModel(modeldata, name)
