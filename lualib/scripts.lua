@@ -57,7 +57,7 @@ function _M.PopState()
 	end
 
 	if getPanelBrightness() ~= res.panel_brightness then
-		gentlySetPanelBrightness(res.led_brightness, 1, res.panel_brightness)
+		gentlySetPanelBrightness(res.led_brightness, res.panel_brightness)
 	end
 
 
