@@ -303,7 +303,7 @@ function drivers.onHidCallback(connectionId, controllerId, data)
     local action = ""
     if len == 2 then  
         --Mouse press
-        log("keyboard.button=", data[1], data[2])
+        log("keyboard.button=".. data[1] .. ' -> '.. data[2])
         local keyboard = drivers.keyboard[controllerId]
         keyboard.button = data[1]
     elseif len == 4 or len == 3 then 
@@ -358,20 +358,23 @@ function drivers.onHidCallback(connectionId, controllerId, data)
         print(str)
     elseif len == 6 or len == 8 or len == 9  then  
         local joystickObject = drivers.joystick[controllerId]
-
+        local buttonStates = ""
         local buttons = data[5]
         if buttons == 0 then  
             for a,c in pairs(drivers.JOSYTICK_BUTTONS_MAP) do
                 joystickObject.buttons[c] = 0
             end
+            buttonStates = " joystick.buttons.<all> 0"
         else
             local idx = drivers.JOSYTICK_BUTTONS_MAP[buttons]
             if idx then
                 joystickObject.buttons[idx] = 1
+                buttonStates = " joystick.buttons."..idx..' 1'
             else 
                 print('Unhandled button press with id '..buttons..' TYPE '..type(buttons))
             end
         end
+
         joystickObject.left_hat = data[6] or 0
         joystickObject.right_hat = data[7] or 0
        
@@ -380,13 +383,13 @@ function drivers.onHidCallback(connectionId, controllerId, data)
 
         joystickObject.right_analog_x = data[3] - 127
         joystickObject.right_analog_y = data[4] - 128
-
+        
         log("Joystick moved: ".. 
             "  joystickObject.left_hat="..joystickObject.left_hat .. 
             ", joystickObject.right_hat="..joystickObject.right_hat .. 
             ", joystickObject.left_analog_x="..joystickObject.left_analog_x..
             ", joystickObject.left_analog_y="..joystickObject.left_analog_y..
-            ", joystickObject.right_analog_y="..joystickObject.right_analog_y)
+            ", joystickObject.right_analog_y="..joystickObject.right_analog_y..' '..buttonStates)
 
     else 
         
