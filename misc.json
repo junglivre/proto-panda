@@ -9,9 +9,9 @@
         "power_gpio": 13,
         "gpio_state": 1,
         "enabled": true,
+        "boop_delay": 0,
         "boopAnimationName": "boop",
-        "transictionOnlyOnAnimation": "normal",
-        "transictionInOnlyOnSpecificFrame": 1
+        "transictionOnlyOnAnimation": "normal"
     },
     "fft": {
         "gpio": 3,
@@ -28,35 +28,39 @@
     },
     "scripts": [
         {
-        "name": "snake",
+        "name": "Snake",
         "file": "/scripts/snake.lua"
         },
         {
-        "name": "jumping wah",
+        "name": "Jumping wah",
         "file": "/scripts/wah.lua"
         },
         {
-        "name": "tetris",
+        "name": "Tetris",
         "file": "/scripts/tetris.lua"
         },
-                {
-        "name": "color test",
+        {
+        "name": "Slot game",
+        "file": "/scripts/slotgame.lua"
+        },
+        {
+        "name": "Color test",
         "file": "/scripts/colortest.lua"
         },
         {
-        "name": "screen test",
+        "name": "Screen test",
         "file": "/scripts/screentest.lua"
         },
         {
-        "name": "controls test",
+        "name": "Controls test",
         "file": "/scripts/controls.lua"
         },
         {
-        "name": "breakout",
+        "name": "Breakout",
         "file": "/scripts/breakout.lua"
         },
         {
-        "name": "color shift",
+        "name": "Color shift",
         "file": "/scripts/colorshift.lua"
         }
     ]

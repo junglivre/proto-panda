@@ -118,7 +118,7 @@ function _M.Load()
 
     _M.minimumLidar = tonumber(dictGet("boop_min") ) or 0
     _M.triggerPosition = tonumber(dictGet("boop_trigg"))  or 0
-    _M.boopTimerDuration = tonumber(dictGet("boop_duration")) or 500
+    _M.boopTimerDuration = tonumber(dictGet("boop_duration")) or tonumber(_M.config["boop_delay"]) or 500
 
     print("Boop configuration loaded min=".._M.minimumLidar.." trigger=".._M.triggerPosition.." timer=".._M.boopTimerDuration)
 
@@ -475,6 +475,7 @@ function _M.readLidar()
 end
 
 function _M.isBoopedCheck(dt)
+    local isSensorPressed = false
     if _M.mode == "lidar" then 
         if hasLidar() then
 
@@ -482,6 +483,7 @@ function _M.isBoopedCheck(dt)
 
             if ok then 
                 if reading > _M.minimumLidar and reading < _M.triggerPosition then
+                    isSensorPressed = true
                     _M.boopTimer = _M.boopTimer+dt  
                 else 
                     _M.boopTimer = 0
@@ -489,20 +491,21 @@ function _M.isBoopedCheck(dt)
                 if _M.boopTimer >= _M.boopTimerDuration then 
                     _M.boopTimer = _M.boopTimerDuration
                     _M.isBooped = true
-                    return true
+                    return true, isSensorPressed
                 end
             else 
                 if _M.isBooped then 
-                    return true
+                    return true, isSensorPressed
                 end
                 _M.boopTimer = 0
             end
             _M.isBooped = false
         end
-        return false
+        return false, isSensorPressed
     elseif _M.mode == "gpio" then 
+        isSensorPressed = digitalRead(_M.gpio) == _M.gpio_state
         if not _M.isBooped then
-            if digitalRead(_M.gpio) == _M.gpio_state then  
+            if isSensorPressed then  
                 _M.boopTimer = _M.boopTimer+dt  
             else
                 _M.boopTimer = 0
@@ -510,7 +513,7 @@ function _M.isBoopedCheck(dt)
             if _M.boopTimer >= _M.boopTimerDuration then 
                 _M.boopTimer = 0
                 _M.isBooped = true
-                return true
+                return true, isSensorPressed
             end
         else 
             if _M.power_gpio and _M.gpioTriggeredOnDuration > 10000 then  
@@ -527,12 +530,12 @@ function _M.isBoopedCheck(dt)
                 _M.gpioTriggeredOnDuration = 0
                 _M.isBooped = false
                 digitalWrite(_M.power_gpio, HIGH)
-                return false
+                return false, isSensorPressed
             end
-            return true
+            return true, isSensorPressed
         end
     end
-    return false
+    return false, isSensorPressed
 end
 
 function _M.reset()

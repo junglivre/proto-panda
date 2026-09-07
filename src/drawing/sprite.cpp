@@ -121,6 +121,12 @@ void Sprite::Draw(FlipConfig flipSettings, ShaderType shader_p, float shaderStre
     const int txH = tx->height;
     const uint16_t *txPixels = tx->pixels;
     const uint16_t transColor = tx->transparentColor;
+
+    int cropW, cropH;
+    if (view.getSize(0, cropW, cropH)){
+        targetW = cropW;
+        targetH = cropH;
+    }
     
     if (targetW > txW){
         targetW = txW;
@@ -131,8 +137,6 @@ void Sprite::Draw(FlipConfig flipSettings, ShaderType shader_p, float shaderStre
 
     float cx = targetW * 0.5f;
     float cy = targetH * 0.5f;
-
-
     
     for (int dy=0;dy<targetH;dy++){
         

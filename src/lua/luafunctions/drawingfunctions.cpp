@@ -84,6 +84,7 @@ uint8_t getPanelBrightness()
 int ClearScreen()
 {
   Devices::Display->clearScreen();
+  memset(OledScreen::DisplayFace[0], 0, sizeof(uint8_t) * CANVAS_WIDTH * CANVAS_HEIGHT);
   return 0;
 }
 
@@ -120,8 +121,8 @@ void composeBulkFile(){
 }
 
 
-void DrawPanelFaceToScreen(int x, int y){
-  OledScreen::DrawPanelFaceToScreen(x, y);
+void DrawPanelFaceToScreen(int x, int y, int scale){
+  OledScreen::DrawPanelFaceToScreen(x, y, scale);
   return;
 }
 
