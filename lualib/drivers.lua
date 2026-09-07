@@ -117,20 +117,25 @@ function drivers.EnableDrivers(input)
             drivers.loaded[driverName] = content
             --todo change to derivate
             if content.type == "hid" then
-                if content.mode then  
-                    for i, mode in pairs(content.mode) do 
-                        if not drivers.validEntries[mode] then  
-                            error("Invalid mode '"..mode.."' in driver "..driverName)
+                if input.enableHidControllers then
+                    if content.mode then  
+                        for i, mode in pairs(content.mode) do 
+                            if not drivers.validEntries[mode] then  
+                                error("Invalid mode '"..mode.."' in driver "..driverName)
+                            end
                         end
+                        content.handler = drivers.loaded["hid"].handler
+                        drivers.device_attribute_map[driverName] = content.mode
+                    else 
+                        error("No mode set for "..driverName)
                     end
-                    content.handler = drivers.loaded["hid"].handler
-                    drivers.device_attribute_map[driverName] = content.mode
-                else 
-                    error("No mode set for "..driverName)
-                end
 
-                content.attribute_map = drivers.device_attribute_map[driverName]
-                print("Loaded hid driver "..driverName)
+                    content.attribute_map = drivers.device_attribute_map[driverName]
+                    print("Loaded hid driver "..driverName)
+                else 
+                    drivers.loaded[driverName] = nil
+                    log("Skipping "..driverName.." because it inherit HID and hid is not enabled")
+                end
             elseif content.type == "core" then
                 drivers.validEntries[driverName] = true
                 drivers[driverName] = content.getDriverModules(drivers.maxClients)
