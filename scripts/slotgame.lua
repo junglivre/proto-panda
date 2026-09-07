@@ -31,7 +31,7 @@ local function clamp(v, lo, hi)
 end
 
 local _M = {
-	VERSION_REQUIRED = "3.3.4",
+	VERSION_REQUIRED = "3.3.5",
 	shouldStop = false,
 	
 	reel = { 0, 0, 0 },
