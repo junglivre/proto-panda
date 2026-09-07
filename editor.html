@@ -1210,17 +1210,11 @@
             return rowItems[rowItems.length - 1].nextElementSibling;
         }
 
-        // Clears the visual "drop here" indicator left over from dragover.
         function clearFrameDragIndicators(container) {
             container.querySelectorAll('.frame-item.drag-insert-before, .frame-item.drag-insert-after')
                 .forEach(el => el.classList.remove('drag-insert-before', 'drag-insert-after'));
         }
 
-        // If the "Current Animation Frames" preset isn't already "Custom
-        // sequence", switches to it and seeds the container with a sensible
-        // baseline (the expression's original custom sequence if it had one,
-        // otherwise whatever auto-generated frames are currently shown) so
-        // adding/reordering a frame doesn't discard the existing animation.
         function ensureCustomSequenceBaseline(container) {
             const animationTypeSelect = document.getElementById('full-animation-type');
             if (animationTypeSelect.value === 'custom') return;
@@ -1231,16 +1225,11 @@
             container.innerHTML = '';
 
             const framesDef = config.frames.find(f => f.name === currentExpression.frames);
-            if (Array.isArray(originalExpressionState.animation)) {
-                generateCustomFramesFromArray(originalExpressionState.animation, framesDef, container, true);
-            } else if (autoFrames.length > 0) {
+            if (autoFrames.length > 0) {
                 generateCustomFramesFromArray(autoFrames, framesDef, container, true);
             }
         }
 
-        // Builds a "Current Animation Frames" chip (with remove button and
-        // reorder handlers) from either an existing chip (reorder path isn't
-        // relevant here) or an "Available Frames" source chip being added.
         function buildCurrentFrameItem(sourceElement) {
             const cloned = sourceElement.cloneNode(true);
             cloned.draggable = true;
@@ -1255,19 +1244,6 @@
             return cloned;
         }
 
-        // Wires up drag-to-reorder AND drag-to-add on the "Current Animation
-        // Frames" container itself. Called once at load time since the
-        // container node persists across re-renders (only its contents are
-        // replaced).
-        //
-        // IMPORTANT: the actual DOM move only happens on "drop", not on every
-        // "dragover". This list uses a wrapping flex layout, so moving an item
-        // mid-drag reflows every sibling's position — which then feeds back
-        // into the next dragover's position calculation, and the item ends up
-        // oscillating between two spots (this was the "keeps switching
-        // positions" bug). Only mutating once, at drop time, avoids the
-        // feedback loop entirely. During dragover we just show a thin
-        // indicator of where the item would land.
         function setupCurrentFramesReordering() {
             const container = document.getElementById('full-current-frames');
             if (!container) return;
@@ -1415,6 +1391,15 @@
                 animationSequence = expression.animation;
             } else {
                 console.error('Invalid animation format:', expression.animation);
+                return;
+            }
+
+            // Nothing to play (e.g. the user just cleared all frames) — clear
+            // the preview instead of trying to animate an empty sequence,
+            // which would index out of bounds and produce "undefined" paths.
+            if (animationSequence.length === 0) {
+                const imgDisplay = document.getElementById('image-display');
+                if (imgDisplay) imgDisplay.removeAttribute('src');
                 return;
             }
 
@@ -1629,7 +1614,7 @@
                     // Regenerate auto frames with new frame definition (resets sequence to auto if not custom)
                     const currentMode = erasedForGroupChange ?
                         'loop' :
-                        (Array.isArray(originalExpressionState.animation) ? 'custom' : animationTypeSelect.value);
+                        (Array.isArray(expression.animation) ? 'custom' : animationTypeSelect.value);
                     generateAutoFrames(currentMode, expression, true);
                     
                     // Regenerate available frames
@@ -1705,13 +1690,15 @@
                     container.appendChild(frameElement);
                 }
             } else if (framesDef.pattern && framesDef.from !== undefined && framesDef.to !== undefined) {
-                // Fall back to from/to pattern. Frame ID is 'from' to 'to'.
-                let frameId = 1;
+                // Fall back to from/to pattern. The Frame ID IS the real on-disk
+                // frame number here (not a synthetic 1..N counter) — this has to
+                // match generateAutoFrames() and expression.animation's storage
+                // format, since that's what gets substituted straight into the
+                // pattern (sprintf(pattern, id)) both for thumbnails and for the
+                // live preview.
                 for (let i = framesDef.from; i <= framesDef.to; i++) {
-                    // Pass 1-based sequential index (frameId) as the Frame ID, and the number i for pattern substitution in createFrameElement
-                    const frameElement = createFrameElement(frameId, i, framesDef, isFullEditor, false);
+                    const frameElement = createFrameElement(i, i, framesDef, isFullEditor, false);
                     container.appendChild(frameElement);
-                    frameId++;
                 }
             } else {
                 container.innerHTML = '<p>Frame group defined but has no frames</p>';
@@ -1733,32 +1720,33 @@
                 return generateCustomFramesFromArray(expression.animation, framesDef, container, isFullEditor);
             }
             
-            // Otherwise, calculate the sequence for automatic modes
+            // Otherwise, calculate the sequence for automatic modes.
+            // frameIDs holds the real, storable frame identifiers: for
+            // files-based groups that's the 1-based index into `files`; for
+            // pattern-based groups that's the actual from..to disk number
+            // (NOT a 1..N counter) — same convention used everywhere else
+            // (generateAvailableFrames, generateCustomFramesFromArray,
+            // saveExpressionChanges's validation, and setExpression's playback).
             let frameSequence = [];
-            let maxFrames = 0;
-            let startFrameIndex = 0;
-            
+            let frameIDs = [];
+
             if (framesDef.files) {
-                maxFrames = framesDef.files.length;
-                startFrameIndex = 1; // 1-based indices
+                frameIDs = Array.from({ length: framesDef.files.length }, (_, i) => i + 1);
             } else if (framesDef.pattern && framesDef.from !== undefined && framesDef.to !== undefined) {
-                maxFrames = framesDef.to - framesDef.from + 1;
-                startFrameIndex = framesDef.from; // actual frame number for pattern logic
+                const count = framesDef.to - framesDef.from + 1;
+                frameIDs = Array.from({ length: count }, (_, i) => framesDef.from + i);
             } else {
                 return;
             }
 
-            // Generate a sequence of 1-based frame IDs for visual display.
-            const frameIDs = Array.from({ length: maxFrames }, (_, i) => i + 1);
-            
             if (animationMode === 'loop' || animationMode === 'auto') {
                 frameSequence = frameIDs;
             } else if (animationMode === 'loop_backwards' || animationMode === 'auto_backwards') {
                 frameSequence = frameIDs.slice().reverse();
             } else if (animationMode === 'pingpong') {
-                // Forward sequence: 1, 2, ..., N
+                // Forward sequence: first..last
                 let forward = frameIDs;
-                // Backward sequence: N-1, N-2, ..., 2
+                // Backward sequence: second-to-last..second (skip both ends)
                 let backward = frameIDs.slice(1, -1).reverse();
                 frameSequence = forward.concat(backward);
             }
@@ -1770,6 +1758,7 @@
                     // For file-based frames, map the 1-based frameID back to the 0-based index for image path lookup
                     frameIndexForImage = frameID - 1;
                 }
+                // For pattern-based frames, frameID is already the real disk number.
                 
                 const frameElement = createFrameElement(frameID, frameIndexForImage, framesDef, isFullEditor, true);
                 container.appendChild(frameElement);
