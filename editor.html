@@ -1098,6 +1098,8 @@
                 <button id="pixel-tool-pencil" class="tool-btn active" type="button">Pencil</button>
                 <button id="pixel-tool-eraser" class="tool-btn" type="button">Eraser</button>
                 <button id="pixel-tool-fill" class="tool-btn" type="button">Fill</button>
+                <button id="pixel-undo-btn" class="secondary" type="button" disabled title="Undo (Ctrl+Z)">↶ Undo</button>
+                <button id="pixel-redo-btn" class="secondary" type="button" disabled title="Redo (Ctrl+Y)">↷ Redo</button>
                 <button id="pixel-clear-btn" class="secondary" type="button">Clear All</button>
                 <label style="display: flex; align-items: center; gap: 5px;">
                     <input type="checkbox" id="pixel-grid-toggle" checked> Grid
@@ -3460,6 +3462,58 @@
         let pixelEditorShowGrid = true;
         let pixelEditorIsNewFrame = false; // true when adding a brand new frame instead of editing an existing one
 
+        // Undo/redo history for the pixel editor. Each entry is a full snapshot
+        // (Uint8ClampedArray copy) of pixelEditorData taken right before a
+        // modification (a whole pencil/eraser stroke, a single fill, or a
+        // clear-all), so one undo step corresponds to one visible action
+        // rather than one individual pixel change.
+        let pixelEditorUndoStack = [];
+        let pixelEditorRedoStack = [];
+        const PIXEL_EDITOR_MAX_HISTORY = 50;
+
+        // Call this once, right before a new edit begins (stroke start, fill
+        // click, or clear), to snapshot the pre-edit state.
+        function pixelEditorPushHistory() {
+            if (!pixelEditorData) return;
+            pixelEditorUndoStack.push(pixelEditorData.slice());
+            if (pixelEditorUndoStack.length > PIXEL_EDITOR_MAX_HISTORY) {
+                pixelEditorUndoStack.shift();
+            }
+            // A fresh edit invalidates any redo history from a previous undo.
+            pixelEditorRedoStack = [];
+            updatePixelEditorHistoryButtons();
+        }
+
+        // Clears all history — call when opening the editor for a new/different frame.
+        function pixelEditorResetHistory() {
+            pixelEditorUndoStack = [];
+            pixelEditorRedoStack = [];
+            updatePixelEditorHistoryButtons();
+        }
+
+        function updatePixelEditorHistoryButtons() {
+            const undoBtn = document.getElementById('pixel-undo-btn');
+            const redoBtn = document.getElementById('pixel-redo-btn');
+            if (undoBtn) undoBtn.disabled = pixelEditorUndoStack.length === 0;
+            if (redoBtn) redoBtn.disabled = pixelEditorRedoStack.length === 0;
+        }
+
+        function pixelEditorUndo() {
+            if (!pixelEditorData || pixelEditorUndoStack.length === 0) return;
+            pixelEditorRedoStack.push(pixelEditorData.slice());
+            pixelEditorData = pixelEditorUndoStack.pop();
+            renderPixelEditorCanvas();
+            updatePixelEditorHistoryButtons();
+        }
+
+        function pixelEditorRedo() {
+            if (!pixelEditorData || pixelEditorRedoStack.length === 0) return;
+            pixelEditorUndoStack.push(pixelEditorData.slice());
+            pixelEditorData = pixelEditorRedoStack.pop();
+            renderPixelEditorCanvas();
+            updatePixelEditorHistoryButtons();
+        }
+
         // Returns every existing frame in a group as {path, frameNumber} objects,
         // regardless of whether the group is defined via an explicit 'files' array
         // or via a 'pattern' + 'from'/'to' numeric range.
@@ -3689,6 +3743,7 @@
             }
 
             pixelEditorData = offCtx.getImageData(0, 0, PIXEL_EDITOR_W, PIXEL_EDITOR_H).data;
+            pixelEditorResetHistory();
             renderPixelEditorCanvas();
             document.getElementById('pixel-editor-modal').style.display = 'flex';
         }
@@ -3713,6 +3768,7 @@
             canvas.height = PIXEL_EDITOR_H * PIXEL_EDITOR_SCALE;
 
             pixelEditorData = new Uint8ClampedArray(PIXEL_EDITOR_W * PIXEL_EDITOR_H * 4);
+            pixelEditorResetHistory();
             renderPixelEditorCanvas();
             document.getElementById('pixel-editor-modal').style.display = 'flex';
         }
@@ -3723,6 +3779,7 @@
             pixelEditorGroupDef = null;
             pixelEditorData = null;
             pixelEditorIsNewFrame = false;
+            pixelEditorResetHistory();
         }
 
         function renderPixelEditorCanvas() {
@@ -3956,6 +4013,8 @@
             const canvas = document.getElementById('pixel-editor-canvas');
 
             canvas.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return; // left click only
+                pixelEditorPushHistory();
                 pixelEditorIsDrawing = true;
                 paintAtEvent(e);
             });
@@ -3967,6 +4026,7 @@
 
             canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                pixelEditorPushHistory();
                 pixelEditorIsDrawing = true;
                 paintAtEvent(e);
             }, { passive: false });
@@ -3980,9 +4040,13 @@
             document.getElementById('pixel-tool-eraser').addEventListener('click', () => setPixelEditorTool('eraser'));
             document.getElementById('pixel-tool-fill').addEventListener('click', () => setPixelEditorTool('fill'));
 
+            document.getElementById('pixel-undo-btn').addEventListener('click', pixelEditorUndo);
+            document.getElementById('pixel-redo-btn').addEventListener('click', pixelEditorRedo);
+
             document.getElementById('pixel-clear-btn').addEventListener('click', () => {
                 if (!pixelEditorData) return;
                 if (!confirm('Clear all pixels on this frame?')) return;
+                pixelEditorPushHistory();
                 pixelEditorData.fill(0);
                 renderPixelEditorCanvas();
             });
@@ -3994,6 +4058,24 @@
 
             document.getElementById('pixel-save-btn').addEventListener('click', savePixelEditorFrame);
             document.getElementById('pixel-cancel-btn').addEventListener('click', closePixelEditor);
+
+            // Keyboard shortcuts: Ctrl+Z (undo), Ctrl+Y or Ctrl+Shift+Z (redo).
+            // Only active while the pixel editor modal is actually open, so
+            // these don't fight with browser/page-level undo elsewhere.
+            document.addEventListener('keydown', (e) => {
+                const modal = document.getElementById('pixel-editor-modal');
+                if (!modal || modal.style.display !== 'flex') return;
+                if (!(e.ctrlKey || e.metaKey)) return;
+
+                const key = e.key.toLowerCase();
+                if (key === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    pixelEditorUndo();
+                } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+                    e.preventDefault();
+                    pixelEditorRedo();
+                }
+            });
         }
 
         document.addEventListener('DOMContentLoaded', setupPixelEditorEvents);
