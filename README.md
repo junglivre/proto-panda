@@ -40,6 +40,7 @@ Protopanda is an open source patform (firmware and hardware), for controling pro
 - USB-C powered
 - Internal screen for menus
 - Wifi mode where you can change configurations
+- Improved Wi-Fi web editor and compact folder-first directory listing
 - Support keyframe animation with vectorial models
 - FFT built in and mouth animations based on sound
 - Open source and open hardware

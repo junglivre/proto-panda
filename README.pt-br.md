@@ -37,6 +37,7 @@ Protopanda é uma plataforma open source (firmware e hardware) para controlar pr
 - Alimentado via USB-C
 - Tela interna com menuzinho
 - Modo WiFi, com editorzinho
+- Editor web via Wi-Fi aprimorado e dirlist compacto, com pastas primeiro
 - Suporte a animação por keyframes com modelos vetoriais
 - FFT integrado e animações de boca baseadas em som
 - Código aberto e hardware aberto
