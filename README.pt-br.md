@@ -1,6 +1,6 @@
 # Protopanda
 
-[🇺🇸 English](README.md) | 🇧🇷 Português
+[🇺🇸 English](README.md) | **🇧🇷 Português**
 
 <p align="center">
   <img src="doc/logoprotopanda.png" alt="Protopanda">
