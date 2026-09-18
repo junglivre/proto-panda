@@ -53,7 +53,7 @@ function onPreflight()
     ledsSetManaged(true)
     setPanelManaged(true)
     expressions.Next()
-    if not configloader.Get().starting_animation then
+    if configloader.Get().starting_animation ~= nil then
         expressions.SetExpression(configloader.Get().starting_animation)
     end
 
