@@ -361,7 +361,7 @@ function drivers.onHidCallback(connectionId, controllerId, data)
             str = str .. b..', '
         end
         print(str)
-    elseif len == 6 or len == 8 or len == 9  then  
+    elseif len >= 6  then  
         local joystickObject = drivers.joystick[controllerId]
         local buttonStates = ""
         local buttons = data[5]
