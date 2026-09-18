@@ -1,0 +1,114 @@
+name: Firmware release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ github.ref_name }} firmware
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore PlatformIO cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: ${{ runner.os }}-platformio-6.1.19-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-platformio-6.1.19-
+
+      - name: Install PlatformIO
+        run: python -m pip install --upgrade platformio==6.1.19
+
+      - name: Verify tag matches firmware version
+        shell: bash
+        run: |
+          firmware_version="$(sed -nE 's/^#define PANDA_VERSION "([^"]+)".*/\1/p' include/tools/config_default.hpp)"
+          tag_version="$GITHUB_REF_NAME"
+          test -n "$firmware_version"
+          test "$firmware_version" = "$tag_version" || {
+            echo "Tag $GITHUB_REF_NAME does not match PANDA_VERSION $firmware_version"
+            exit 1
+          }
+
+      - name: Build universal release firmware
+        run: pio run -e release
+
+      - name: Package release assets
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp .pio/build/release/firmware.bin "dist/protopanda-${GITHUB_REF_NAME}.bin"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from zipfile import ZIP_DEFLATED, ZipFile
+
+          root = Path(".")
+          output = Path("dist") / f"protopanda-{os.environ['GITHUB_REF_NAME']}-sd-card.zip"
+          required_directories = ("scripts", "expressions", "lualib")
+
+          with ZipFile(output, "w", ZIP_DEFLATED) as archive:
+              for directory_name in required_directories:
+                  directory = root / directory_name
+                  if not directory.is_dir():
+                      raise SystemExit(f"Required SD-card directory is missing: {directory}")
+                  for path in directory.rglob("*"):
+                      if path.is_file():
+                          archive.write(path, path.as_posix())
+
+              for pattern in ("*.lua", "*.json", "*.html"):
+                  for path in root.glob(pattern):
+                      if path.is_file():
+                          archive.write(path, path.name)
+          PY
+          cd dist
+          sha256sum *.bin *.zip > SHA256SUMS.txt
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: dist/
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: dist
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/protopanda-${GITHUB_REF_NAME}.bin" \
+            "dist/protopanda-${GITHUB_REF_NAME}-sd-card.zip" \
+            dist/SHA256SUMS.txt \
+            --title "ProtoPanda $GITHUB_REF_NAME" \
+            --generate-notes \
+            --notes $'## SD-card package\n\n> **Configuration notice:** The included SD-card files use default `hardware.json` and `misc.json` settings. Before using them, verify that both files match your ProtoPanda kit and intended setup.\n\n> **Back up first:** Copy your current SD-card contents before replacing files. Release packages do not migrate custom animations, scripts, or settings automatically.' \
+            --verify-tag
