@@ -33,7 +33,7 @@
         "file": "/scripts/snake.lua"
         },
         {
-        "name": "Jumping wah",
+        "name": "Jumping Wah",
         "file": "/scripts/wah.lua"
         },
         {
@@ -41,19 +41,23 @@
         "file": "/scripts/tetris.lua"
         },
         {
-        "name": "Slot game",
+        "name": "Slot Game",
         "file": "/scripts/slotgame.lua"
         },
         {
-        "name": "Color test",
+        "name": "Proto DOOM",
+        "file": "/scripts/protodoom.lua"
+        },
+        {
+        "name": "Color Test",
         "file": "/scripts/colortest.lua"
         },
         {
-        "name": "Screen test",
+        "name": "Screen Test",
         "file": "/scripts/screentest.lua"
         },
         {
-        "name": "Controls test",
+        "name": "Controls Test",
         "file": "/scripts/controls.lua"
         },
         {
@@ -61,7 +65,7 @@
         "file": "/scripts/breakout.lua"
         },
         {
-        "name": "Color shift",
+        "name": "Color Shift",
         "file": "/scripts/colorshift.lua"
         }
     ]
