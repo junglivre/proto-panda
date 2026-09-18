@@ -9,6 +9,14 @@
       "name"      : "frames_blink"
     },
     {
+      "pattern"   : "/expressions/startup/startup (%d).png",
+      "flip_left" : false,
+      "flip_right": true,
+      "from"      : 1,
+      "to"        : 47,
+      "name"      : "frames_startup"
+    },
+    {
       "pattern"   : "/expressions/angry/angry%d.png",
       "flip_left" : false,
       "flip_right": true,
@@ -270,6 +278,14 @@
       ],
       "overlay"  : "mouth",
       "duration" : 75
+    },
+    {
+      "name"      : "startup",
+      "frames"    : "frames_startup",
+      "animation" : "loop",
+      "transition": true,
+      "outro"    : "normal",
+      "duration"  : 75
     },
     {
       "name"      : "angry_intro",
