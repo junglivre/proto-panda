@@ -45,10 +45,10 @@
     "joystick.buttons.4": "BUTTON_CONFIRM",
     "joystick.buttons.1": "BUTTON_BACK",
 
-    "joystick..left_analog_x<-10": "BUTTON_LEFT",
-    "joystick..left_analog_y>10": "BUTTON_DOWN",
-    "joystick..left_analog_x>10": "BUTTON_RIGHT",
-    "joystick..left_analog_y<-7": "BUTTON_UP",
+    "joystick.left_analog_x<-10": "BUTTON_LEFT",
+    "joystick.left_analog_y>10": "BUTTON_DOWN",
+    "joystick.left_analog_x>10": "BUTTON_RIGHT",
+    "joystick.left_analog_y<-7": "BUTTON_UP",
 
     "generic.buttons.4": "BUTTON_LEFT",
     "generic.buttons.1": "BUTTON_DOWN",
