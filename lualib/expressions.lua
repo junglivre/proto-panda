@@ -1,13 +1,33 @@
 local configloader = require("configloader")
+local json = require("json")
 
 local _M = {
 	animations = {},
 	by_name = {},
 	by_frame = {},
 	pendingEnter = {},
+	collections = {},
 	count = 0,
 	editbutton_state=0,
 }
+
+local function collectionConfigPath(collection)
+	local path = collection.path or ("/expressions/collections/"..collection.name)
+	path = path:gsub("/+$", "")
+	return path.."/animation.json", path
+end
+
+local function loadCollectionConfig(collection)
+	local filename = collectionConfigPath(collection)
+	local file, err = io.open(filename, "r")
+	if not file then
+		error("Failed to load expression collection '"..tostring(collection.name).."' at "..filename..": "..tostring(err))
+	end
+	local content = file:read("*a")
+	file:close()
+	json.filename = filename
+	return json.decode(content), filename
+end
 
 function _M.loadSingleExpression(data, filename, i)
 	local id = #_M.animations+1
@@ -24,7 +44,7 @@ function _M.loadSingleExpression(data, filename, i)
 		data.modelAnimId = data.obj:GetId()
 		_M.by_name[data.name] = id
 		_M.by_frame[MODEL_FRAME_ID_OFFSET + data.modelAnimId] = id
-		if not data.transition then 
+		if not data.transition and not data.collection then
 			_M.count = _M.count+1
 		end
 
@@ -95,7 +115,7 @@ function _M.loadSingleExpression(data, filename, i)
 			data.onLeave = f
 		end
 		_M.by_name[data.name] = id
-		if not data.transition then 
+		if not data.transition and not data.collection then
 			_M.count = _M.count+1
 		end
 		_M.animations[#_M.animations+1] = data
@@ -123,11 +143,53 @@ function _M.Load()
 	generic.displaySplashMessage("Starting:\nModel Expressions")
 	content = nil
 	local conf = configloader.Get()
+	_M.animations = {}
+	_M.by_name = {}
+	_M.by_frame = {}
+	_M.pendingEnter = {}
+	_M.collections = {}
+	_M.count = 0
 
 
 	generic.displaySplashMessage("Starting:\nExpressions")
 	for i ,b in pairs(conf.expressions) do 
 		_M.loadSingleExpression(b, "/animation.json", i)
+	end
+	-- A collection's own animation.json has the familiar frames/expressions
+	-- layout. The root config only declares its name and folder, keeping large
+	-- personal packs completely separate from regular expressions.
+	for collection_index, collection_data in ipairs(conf.expression_collections or {}) do
+		local collection_name = collection_data.name or ("Collection "..collection_index)
+		local collection_config, filename = loadCollectionConfig(collection_data)
+		local prefix = "collection:"..collection_name..":"
+		local collection = {
+			name = collection_name,
+			expressions = {},
+		}
+		_M.collections[#_M.collections+1] = collection
+		for expression_index, expression_data in ipairs(collection_config.expressions or {}) do
+			local display_name = expression_data.name or ("expression "..expression_index)
+			expression_data.name = prefix..display_name
+			expression_data.display_name = display_name
+			if type(expression_data.frames) == "string" then
+				expression_data.frames = prefix..expression_data.frames
+			end
+			if type(expression_data.intro) == "string" then
+				expression_data.intro = prefix..expression_data.intro
+			end
+			if type(expression_data.outro) == "string" then
+				expression_data.outro = prefix..expression_data.outro
+			end
+			expression_data.collection = collection_name
+			_M.loadSingleExpression(expression_data, filename, expression_index)
+			local loaded = _M.animations[#_M.animations]
+			if loaded and not loaded.transition and not loaded.hidden then
+				collection.expressions[#collection.expressions+1] = {
+					id = loaded.name,
+					name = loaded.display_name or loaded.name,
+				}
+			end
+		end
 	end
 	local models = require("models")
 	local modelAnim = models.getModelAnimationList("/models.json")
@@ -139,7 +201,7 @@ function _M.Load()
 
 	local res = {}
 	for __, data in pairs(_M.animations) do 
-		if not data.transition and not data.hidden then
+		if not data.transition and not data.hidden and not data.collection then
 			res[#res+1] = data.name
 		end
 	end
@@ -191,11 +253,14 @@ function _M.GetAnimationNameByFace(faceid)
 	if not aux then 
 		return "none"
 	end
-	return aux.name
+	return aux.display_name or aux.name
 end
 
 
 function _M.Next(id)
+	if _M.count == 0 then
+		return nil
+	end
 	if not id then
 		id = _M.GetCurrentExpressionId()
 	end
@@ -206,13 +271,16 @@ function _M.Next(id)
 	if id > #_M.animations then 
 		id = 1
 	end
-	if _M.animations[id] and (_M.animations[id].transition or _M.animations[id].hidden) then 
+	if _M.animations[id] and (_M.animations[id].transition or _M.animations[id].hidden or _M.animations[id].collection) then
 		return _M.Next(id)
 	end
 	return _M.SetExpression(id)
 end
 
 function _M.Previous(id)
+	if _M.count == 0 then
+		return nil
+	end
 	if not id then
 		id = _M.GetCurrentExpressionId()
 	end
@@ -223,7 +291,7 @@ function _M.Previous(id)
 	if id <= 0 then 
 		id = #_M.animations
 	end
-	if _M.animations[id] and (_M.animations[id].transition  or _M.animations[id].hidden) then 
+	if _M.animations[id] and (_M.animations[id].transition or _M.animations[id].hidden or _M.animations[id].collection) then
 		return _M.Previous(id)
 	end
 	return _M.SetExpression(id)
@@ -233,6 +301,12 @@ end
 function _M.SetExpression(id)
 	local aux = _M.GetExpression(id)
 	if aux then 
+		-- A transition can finish on an expression different from the one
+		-- tracked in previousExpression (for example startup -> normal).
+		-- Clear every active overlay before changing faces so it cannot leak
+		-- into a collection image that intentionally has no overlay.
+		local overlays = require("overlays")
+		overlays.disableAllOverlays()
 		local repeats = aux.repeats or -1
 		local allDrop = true
 		if aux.transition then 
@@ -246,7 +320,6 @@ function _M.SetExpression(id)
 				_M.previousExpression.onLeave()
 			end
 			if _M.previousExpression.overlay then  
-				local overlays = require("overlays")
 				overlays.disableOverlay(_M.previousExpression.overlay)
 			end
 		end
@@ -313,6 +386,18 @@ end
 
 function _M.GetExpressionCount()
 	return _M.count
+end
+
+function _M.GetCollections()
+	return _M.collections
+end
+
+function _M.GetCollection(index)
+	return _M.collections[index]
+end
+
+function _M.GetCollectionCount()
+	return #_M.collections
 end
 
 

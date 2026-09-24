@@ -121,7 +121,7 @@ function _M.loadSingleOverlay(id, data)
     end
 
     element.id = id
-    element.name = name
+    element.name = data.name
     _M.by_name[data.name] = element
     _M.loaded[id] = element
 end

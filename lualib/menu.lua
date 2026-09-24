@@ -8,6 +8,7 @@ MODE_SCRIPTS = 6
 MODE_CALIBRATE_BOOP = 7
 MODE_CALIBRATE_MIC = 8
 MODE_SYSTEM_INFO = 9
+MODE_COLLECTION_EXPRESSIONS = 10
 
 local scripts = require("scripts")
 local ui = require("ui")
@@ -16,6 +17,7 @@ local boop = require("boop")
 local input = require("input")
 local drivers = require("drivers")
 local configloader = require("configloader")
+local expressions = require("expressions")
 
 
 MAX_INTERFACE_ICONS = 4
@@ -88,7 +90,7 @@ function _M.drawPairingBox(title, subtitle)
     drawCenteredText(subtitle, boxX, boxW, subtitleY, 1)
 end
 
-function _M.setup(expressions)
+function _M.setup()
     local overlays = require("overlays")
 
     _M.editbutton_state = digitalRead(EDIT_MODE_PIN)
@@ -260,7 +262,23 @@ function _M.setup(expressions)
         end)
     end
 
+end
 
+local function getFaceMenuEntries()
+    local entries = {}
+    for _, name in ipairs(expressions.GetExpressions()) do
+        entries[#entries+1] = { kind = "expression", name = name }
+    end
+    -- Collection cards are appended after normal faces. They are selectors,
+    -- not expressions, so selecting one cannot accidentally change the face.
+    for index, collection in ipairs(expressions.GetCollections()) do
+        entries[#entries+1] = {
+            kind = "collection",
+            name = "> "..collection.name,
+            collectionIndex = index,
+        }
+    end
+    return entries
 end
 
 function _M.reapplyButtons()
@@ -286,6 +304,30 @@ end
 function _M.enterScriptsMenu()
     _M.mode = MODE_SCRIPTS
     _M.scripts.onEnter()
+end
+
+function _M.enterCollectionExpressions(collectionIndex)
+    local collection = expressions.GetCollection(collectionIndex)
+    if not collection then
+        _M.enterFaceMenu()
+        return
+    end
+
+    _M.collectionExpressions = ui.generateUi(collection.name, nil, _M.enterFaceMenu)
+    for _, collectionExpression in ipairs(collection.expressions) do
+        local expressionId = collectionExpression.id
+        local expressionName = collectionExpression.name
+        _M.collectionExpressions.addElement(function() return expressionName end, function()
+            local expression = expressions.SetExpression(expressionId)
+            if expression then
+                _M.menuExpression = expression.display_name or expression.name
+                _M.timer = _M.displayTime
+                boop.reset()
+            end
+        end)
+    end
+    _M.mode = MODE_COLLECTION_EXPRESSIONS
+    _M.collectionExpressions.onEnter()
 end
 
 function _M.enterPanelBrightnessMenu()
@@ -368,7 +410,7 @@ function _M.draw(dt)
             oledDrawRect(67, 0, 60, 14, 1)
         elseif _M.selected == 1 then
             oledDrawRect(67, 14, 60, 14, 1)
-        else 
+        else
             oledDrawRect(67, 28, 60, 14, 1)
         end
         oledSetCursor(69, 3)
@@ -406,7 +448,7 @@ function _M.draw(dt)
         if id and id > 0 then 
             local aux = expressions.GetExpression(id)
             if aux then
-                oledDrawText(aux.name)
+                oledDrawText(aux.display_name or aux.name)
             else 
                 oledDrawText("Error?")
             end
@@ -440,11 +482,11 @@ function _M.draw(dt)
             end
         end
 
-        for idx, name in pairs(expressions.GetExpressions()) do 
-            local realIdx = idx
-            idx = idx - skipIdx
+        for realIdx, entry in ipairs(getFaceMenuEntries()) do
+            local idx = realIdx - skipIdx
             if idx > 0 then
                 oledSetCursor(3 + xOffset, 1 + (idx-1) * MENU_SPACING + yOffset)
+                local name = entry.name
                 if #name > 10 then 
                     name = name:sub(1, 10)
                 end
@@ -483,7 +525,7 @@ function _M.draw(dt)
             oledDrawLine(64,32, 64 - sin, 32 - cos,1)
             oledDrawLine(64,32, 64 - sin, 32 + cos,1)
         end
-        local maxExpressions = expressions.GetExpressionCount()
+        local maxExpressions = #getFaceMenuEntries()
         local lastPage = math.floor((maxExpressions-1)/(MAX_INTERFACE_ICONS*2))
         local currentPage = math.floor((_M.selected-1)/(MAX_INTERFACE_ICONS*2))
         oledSetCursor(10, 64-8)
@@ -511,6 +553,8 @@ function _M.draw(dt)
         oledDisplay()
     elseif _M.mode == MODE_SCRIPTS then 
         _M.scripts.draw()
+    elseif _M.mode == MODE_COLLECTION_EXPRESSIONS then
+        _M.collectionExpressions.draw()
     elseif _M.mode == MODE_CALIBRATE_BOOP then 
         boop.CalibrateDraw()
     elseif _M.mode == MODE_CALIBRATE_MIC then 
@@ -700,6 +744,10 @@ function _M.handleMenu(dt)
         if not _M.scripts.handle(dt) then 
             return
         end    
+    elseif _M.mode == MODE_COLLECTION_EXPRESSIONS then
+        if not _M.collectionExpressions.handle(dt) then
+            return
+        end
     elseif _M.mode == MODE_CALIBRATE_BOOP then 
         boop.Calibrate(dt)
         if boop.quit then
@@ -866,61 +914,65 @@ end
 
 
 function _M.handleFaceMenu(dt)
+    local entries = getFaceMenuEntries()
+    local maxExpressions = #entries
+    if maxExpressions == 0 then
+        if input.readButtonStatus(BUTTON_BACK) == BUTTON_JUST_PRESSED then
+            _M.enterMainMenu()
+        end
+        return
+    end
 
     _M.timer = _M.timer - dt
-    if input.readButtonStatus(BUTTON_LEFT) == BUTTON_JUST_PRESSED then 
+    if input.readButtonStatus(BUTTON_LEFT) == BUTTON_JUST_PRESSED then
         toneDuration(340, 50)
         if _M.selected < MAX_INTERFACE_ICONS then
-            local maxExpressions = expressions.GetExpressionCount()
             local lastPage = math.floor((maxExpressions-1)/MAX_INTERFACE_ICONS)
             _M.selected = lastPage*MAX_INTERFACE_ICONS + _M.selected
-            if _M.selected > maxExpressions then  
+            if _M.selected > maxExpressions then
                 _M.selected = maxExpressions
             end
         else
-            _M.selected = _M.selected-MAX_INTERFACE_ICONS
+            _M.selected = _M.selected - MAX_INTERFACE_ICONS
         end
     end
 
-    if input.readButtonStatus(BUTTON_RIGHT) == BUTTON_JUST_PRESSED then 
-        local maxExpressions = expressions.GetExpressionCount()
-  
+    if input.readButtonStatus(BUTTON_RIGHT) == BUTTON_JUST_PRESSED then
         toneDuration(540, 50)
-        _M.selected = _M.selected+MAX_INTERFACE_ICONS
-        if _M.selected > maxExpressions then 
+        _M.selected = _M.selected + MAX_INTERFACE_ICONS
+        if _M.selected > maxExpressions then
             local lastPage = math.floor((maxExpressions-1)/MAX_INTERFACE_ICONS)
             local currentPage = math.floor((_M.selected-1)/MAX_INTERFACE_ICONS)
-            if currentPage > lastPage then  
+            if currentPage > lastPage then
                 _M.selected = (_M.selected%MAX_INTERFACE_ICONS)
             else
                 _M.selected = maxExpressions
             end
-        end    end
+        end
+    end
 
-    if input.readButtonStatus(BUTTON_UP) == BUTTON_JUST_PRESSED then 
+    if input.readButtonStatus(BUTTON_UP) == BUTTON_JUST_PRESSED then
         toneDuration(540, 50)
-        if (_M.selected%MAX_INTERFACE_ICONS == 1) then 
+        if (_M.selected%MAX_INTERFACE_ICONS == 1) then
             _M.selected = _M.selected +(MAX_INTERFACE_ICONS-1)
-            local maxExpressions = expressions.GetExpressionCount()
-            if _M.selected > maxExpressions then 
+            if _M.selected > maxExpressions then
                 _M.selected = maxExpressions
             end
         else
             _M.selected = _M.selected -1
         end
-        if _M.selected <= 0 then  
+        if _M.selected <= 0 then
             _M.selected = MAX_INTERFACE_ICONS-1
         end
     end
-    if input.readButtonStatus(BUTTON_DOWN) == BUTTON_JUST_PRESSED then 
+    if input.readButtonStatus(BUTTON_DOWN) == BUTTON_JUST_PRESSED then
         toneDuration(340, 50)
-        if (_M.selected%MAX_INTERFACE_ICONS == 0) then 
+        if (_M.selected%MAX_INTERFACE_ICONS == 0) then
             _M.selected = _M.selected -(MAX_INTERFACE_ICONS-1)
-        else 
+        else
             _M.selected = _M.selected +1
         end
-        local maxExpressions = expressions.GetExpressionCount()
-        if _M.selected > maxExpressions then  
+        if _M.selected > maxExpressions then
             local lastPage = math.floor((maxExpressions-1)/MAX_INTERFACE_ICONS)
             _M.selected = (lastPage*MAX_INTERFACE_ICONS)+1
         end
@@ -949,13 +1001,17 @@ function _M.handleFaceMenu(dt)
         if not _M.hasConfirmPressedToAvoidUnwantedSelection then  
             return
         end
-        local exps = expressions.GetExpressions()
-        expressions.SetExpression(exps[_M.selected])
-        boop.reset()
-        _M.menuExpression = exps[_M.selected]
-        _M.timer = _M.displayTime
-        toneDuration(440, 10)
-
+        local entry = entries[_M.selected]
+        if entry.kind == "collection" then
+            _M.hasConfirmPressedToAvoidUnwantedSelection = false
+            _M.enterCollectionExpressions(entry.collectionIndex)
+        else
+            expressions.SetExpression(entry.name)
+            boop.reset()
+            _M.menuExpression = entry.name
+            _M.timer = _M.displayTime
+            toneDuration(440, 10)
+        end
     end
 
 end

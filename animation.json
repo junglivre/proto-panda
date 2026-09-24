@@ -217,6 +217,7 @@
       "name"      : "frames_noise"
     }
   ],
+  "expression_collections": [],
   "overlays"   : [
     {
       "name"    : "stars",
