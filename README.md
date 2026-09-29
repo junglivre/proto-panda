@@ -29,6 +29,7 @@ Protopanda is an open source platform (firmware and hardware) for controlling pr
 12. [Remote controller](#remote-controller)
 13. [Hardware](#hardware)
 14. [Programming in Lua](#programming-in-lua)
+15. [Donating](#donating)
 
 ## Features
 
@@ -530,3 +531,7 @@ function onLoop(dt)
   end
 end
 ```
+
+## Donating
+
+If you liked the project, its been a expensive project to me, all the tools and stuff. If you want to just support me, you can donate to my paypal: matheus_diodo@hotmail.com, any donations will be directly used to get more tools, try alternative designs, new technologies or iterations of the PCBS <3
