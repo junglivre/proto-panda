@@ -8,8 +8,8 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
-  <img src="https://img.shields.io/badge/firmware-3.3.5-orange.svg" alt="Firmware version">
-  <img src="https://img.shields.io/badge/board-ESP32--S3--N16R8-informational.svg" alt="Board: ESP32-S3-N16R8">
+  <a href="../../releases/latest"><img src="https://img.shields.io/github/v/release/junglivre/proto-panda?display_name=tag&sort=semver&label=firmware&color=orange" alt="Firmware version"></a>
+  <a href="#hardware"><img src="https://img.shields.io/badge/board-ESP32--S3--N16R8-informational.svg" alt="Board: ESP32-S3-N16R8"></a>
   <a href="https://t.me/mockdiodes"><img src="https://img.shields.io/badge/Telegram-Channel-26A5E4.svg?logo=telegram&logoColor=white" alt="Telegram channel"></a>
   <a href="https://t.me/protopandachat"><img src="https://img.shields.io/badge/Telegram-Chat-26A5E4.svg?logo=telegram&logoColor=white" alt="Telegram chat"></a>
 </p>
@@ -18,18 +18,18 @@ Protopanda is an open source platform (firmware and hardware) for controlling pr
 
 1. [Features](#features)
 2. [3D Models](#3d-models)
-3. [Guides](#guides)
 4. [FAQ](#faq)
 5. [Powering](#powering)
 6. [Panels](#panels)
 7. [Face and Expressions](#face-and-expressions)
 8. [Compiling and flashing firmware](./doc/flashing-guide.md)
 9. [LED Strips](#led-strips)
-10. [Bluetooth](#bluetooth)
-11. [Hardware](#hardware)
-12. [DIY](#diy)
-13. [Printing and assembling guide](./doc/print-guide.md)
+10. [Making your own protopanda](#making)
+11. [Guides](#guides)
+12. [Remote controller](#remote-controller)
+13. [Hardware](#hardware)
 14. [Programming in Lua](#programming-in-lua)
+15. [Donating](#donating)
 
 ## Features
 
@@ -60,19 +60,6 @@ All 3D models are on Thingiverse.
 **Head:** https://www.thingiverse.com/thing:7188042
 
 **Front frame:** https://www.thingiverse.com/thing:7188045
-
-[Check the FAQ here](./doc/faq.md)
-
-## Guides
-
-There are several guides with images and all!
-
-* [Printing and assembling guide](./doc/print-guide.md)
-* [Building your own protopanda (DIY)](./doc/diy-guide.md)
-* [Assembling the front frame with all parts](./doc/front-frame-guide.md)
-* [Flashing and compiling the firmware](./doc/flashing-guide.md)
-* [Configuring your protogen](./doc/configuring.md)
-* [Lua function reference](doc/lua-doc.md)
 
 ## FAQ
 
@@ -392,12 +379,39 @@ You can define them inside `hardware.json`:
 | `fade_in` | Gradual fade-in effect | `hue` (0-255), `saturation` (0-255), `step` (0-255), `delay` (ms) |
 | `noise` | Random noise effect | `step` (0-255), `delay` (ms) |
 
-## Bluetooth
+## Making
 
-#### Remote Controller
+
+![Electronics schematic](doc/diy-schematic.png "Electronics schematic")
+
+We know not everyone can build a PCB from scratch or buy it from someone. Sometimes the inner maker inside us scream for more projects. Or is just the ADHD.
+
+To feed this insatiable hunger, I made several [guides](#guides). so there's a way to build your own reduced version of Protopanda. Each guide has the material list, schematics and tools required.
+
+### Extra resources
+
+* [3D models of the head](https://www.thingiverse.com/thing:7188042)
+* [3D models of front frame](https://www.thingiverse.com/thing:7188045)
+* [Gerber files](./gerber)
+
+## Guides
+
+There are several guides with images and all!
+
+* [Building your own protopanda electronics (DIY)](./doc/diy-guide.md)
+* [Flashing and compiling the firmware](./doc/flashing-guide.md)
+* [Building the remote controller](./doc/controller-guide.md)
+* [Printing and assembling guide of the head](./doc/print-guide.md)
+* [Assembling the front frame with all electronics](./doc/front-frame-guide.md)
+* [Configuring your protogen](./doc/configuring.md)
+* [Lua function reference](doc/lua-doc.md)
+
+
+## Remote controller
 
 To control it, you can:
-* Use a Protopanda controller built with an NRF52832.
+* Use a Protopanda controller built with an [NRF52832/NRF52840 or ESP32Super mini](./doc/controller-guide.md)
+* Use the [android APP](https://play.google.com/store/apps/details?id=gay.protopanda.controller)
 * Use an IR controller and write a driver for it.
 * Write your own solution using the two extra GPIOs left.
 * Buy a BLE HID device that's compatible.
@@ -467,19 +481,6 @@ Protopanda uses (and abuses) both cores of the ESP32.
 * **Core 1**
   The second core handles non-screen-related tasks. It runs the routine that checks the [power level](#powering), updates inputs, reads sensors, and calls the Lua function `onLoop`.
 
-### DIY
-
-We know not everyone can build a PCB from scratch, so there's a way to build your own reduced version of Protopanda.
-
-Check out the [guide for making your own Protopanda!](./doc/diy-guide.md)
-
-![Electronics schematic](doc/diy-schematic.png "Electronics schematic")
-
-
-## Printing and Assembling Guide
-
-[Guide here](./doc/print-guide.md)
-
 ## Programming in Lua
 
 __[Lua functions reference](doc/lua-doc.md)__
@@ -530,3 +531,7 @@ function onLoop(dt)
   end
 end
 ```
+
+## Donating
+
+If you liked the project, its been a expensive project to me, all the tools and stuff. If you want to just support me, you can donate to my paypal: matheus_diodo@hotmail.com, any donations will be directly used to get more tools, try alternative designs, new technologies or iterations of the PCBS <3
