@@ -1,10 +1,10 @@
 # Remote controller
 
-Protopanda **REQUIRES** you to have a way to control it. Yes  you can cycle animatyions pressing the "boot" (GPIO 0) button, and you can hack some button on the avaliable GPIOS... Thats not the intended way.
+Protopanda **REQUIRES** you to have a way to control it. Yes  you can cycle animations pressing the "boot" (GPIO 0) button, and you can hack some button on the available GPIOS... That's not the intended way.
 
-Also yes, there is the android app. It is handy since you dont need to build or buy anything extra, but during the convention its a bit awkward right? Therefore we are here to build one!
+Also yes, there is the android app. It is handy since you don't need to build or buy anything extra, but during the convention it's a bit awkward right? Therefore we are here to build one!
 
-Unlike the protopanda controller, here you have alot of room to make mistakes and **alot** of room to make customizations. 
+Unlike the protopanda controller, here you have a lot of room to make mistakes and **a lot** of room to make customizations. 
 
 ## Board versions
 
@@ -14,9 +14,9 @@ Currently the supported code is for those micro controllers:
 * NRF52832
 * Esp32 SuperMini
 
-I dont reccomend the esp32 because it is super power hungry, but its a platform most of makers have used before.
-The ideal MCU would be NRF52832, its a ultra low power chip, it can last weeks/months during deep sleep in a single CR2032 cell, but it does require an external flashing device.
-The sweet spot is NRF52840, uses significantly more power than NRF52832 but still can last days in a single CR2032 and dont require an external flashing device.
+I don't recommend the esp32 because it is super power hungry, but it's a platform most of makers have used before.
+The ideal MCU would be NRF52832, it's a ultra low power chip, it can last weeks/months during deep sleep in a single CR2032 cell, but it does require an external flashing device.
+The sweet spot is NRF52840, uses significantly more power than NRF52832 but still can last days in a single CR2032 and don't require an external flashing device.
 
 ## What are we building
 
@@ -24,11 +24,11 @@ The gist of it is this:
 
 ![alt text](guide-controller-1.png)
 
-A battery, a switch, the controller, an accelerometer and 6 buttons. Thats it.
+A battery, a switch, the controller, an accelerometer and 6 buttons. That's it.
 
 ## Materials
 
-For this guide, we're using NRF52840. You can chose other controller, as long it has BLE and you modify the pins accordingly.
+For this guide, we're using NRF52840. You can choose other controller, as long it has BLE and you modify the pins accordingly.
 
 ### NRF52840 Variants
 
@@ -40,7 +40,7 @@ There are 3 variants. The guide photos will cover the cheaper variant. But the o
 
 ![alt text](guide-controller-2.png)
 
-This board is the biggest one in comparsion o the other two variants. But its by far the cheapest one.
+This board is the biggest one in comparison to the other two variants. But it's by far the cheapest one.
 
 #### Small but on budget
 
@@ -48,7 +48,7 @@ This board is the biggest one in comparsion o the other two variants. But its by
 
 ![alt text](guide-controller-3.png)
 
-Less half the size of the nice!nano. Pricier for beeing from SeeedStudio. 
+Less half the size of the nice!nano. Pricier for being from SeeedStudio. 
 
 #### BEST option but pricier
 
@@ -56,7 +56,7 @@ Less half the size of the nice!nano. Pricier for beeing from SeeedStudio.
 
 ![alt text](guide-controller-3.png)
 
-Just like the other one, but this version comes with an accelerometer inside. The project uses this same accelerometer, so its a win!
+Just like the other one, but this version comes with an accelerometer inside. The project uses this same accelerometer, so it's a win!
 If you choosing this one, you can completely skip the soldering of the LSM6DS3.
 
 ### Material list
@@ -67,16 +67,16 @@ If you choosing this one, you can completely skip the soldering of the LSM6DS3.
 * [LSM6DS3 if not using XIAO sense plus](https://pt.aliexpress.com/item/1005012449925493.html)
 * 6x [two leg tactile button](https://pt.aliexpress.com/item/1005007173900553.html). Honestly, ANY button should work, you can choose the best for you.
 * [CR2032 case with switch](https://s.click.aliexpress.com/e/_c3V47s1r)
-* [Silicone flexible wires](https://pt.aliexpress.com/item/1005008153169841.html). Can be any wire, i just like slicone wires for beeing resistant.
+* [Silicone flexible wires](https://pt.aliexpress.com/item/1005008153169841.html). Can be any wire, I just like silicone wires for being resistant.
 * [J-LINK only if using NRF52832](https://s.click.aliexpress.com/e/_c40sFFM1) (not gonna be used in this guide)
 * [Some thin fabric gloves](https://s.click.aliexpress.com/e/_c2ui0zi9)
 
 ## Flashing
 
-The very first step is to flash the firmware to test the board. For that, follow the [Setting up the enviroment](./flashing-guide.md#setting-up-the-environment) guide until the part to flash. It will be needed pioarduino/platformio for this.
+The very first step is to flash the firmware to test the board. For that, follow the [Setting up the environment](./flashing-guide.md#setting-up-the-environment) guide until the part to flash. It will be needed pioarduino/platformio for this.
 Then on visual studio code, add the workspace of the remote controller. The folder is in the protopanda folder at `remote-control\nrfversion`.
 
-Once it loads you will need to select the correct enviroment. For this guide, we're using Nice!Nano, therefore you click on  this option:
+Once it loads you will need to select the correct environment. For this guide, we're using Nice!Nano, therefore you click on  this option:
 
 ![alt text](guide-controller-4.png)
 
@@ -84,7 +84,7 @@ A window will open and you must select the `nice_nano`
 
 ![alt text](guide-controller-5.png)
 
-Wait vscode finish configuring and download all the tools. Once ready, plug the board on your computer. It might show as a storage device, if it does not, dont worry its ok too.
+Wait vscode finish configuring and download all the tools. Once ready, plug the board on your computer. It might show as a storage device, if it does not, don't worry it's ok too.
 
 ![alt text](guide-controller-6.png)
 
@@ -92,14 +92,14 @@ Then you have to click to upload. It will build the project and eventually flash
 
 ![alt text](guide-controller-7.png)
 
-It might fail to flash the first time, pess it again, maybe remove from the usb and plug again, eventually its gonna work unless you got a dead board.
+It might fail to flash the first time, press it again, maybe remove from the usb and plug again, eventually it's gonna work unless you got a dead board.
 
 Once flashed you will see a red led that will blink 5 times and then stay on. 
 If you're using the XIAO, there are two leds blinking, a red and a blue, then a blue will stay on.
 
 That blinking when powering on indicates the controller failed to find the IMU and will run without transmitting the accelerometer data. We can test it already.
 
-Turn on your protopanda, make sure its in pairing mode
+Turn on your protopanda, make sure it's in pairing mode
 
 ![alt text](guide-controller-8.png)
 
@@ -109,12 +109,12 @@ There you go. You got the controller working, just need to add some buttons and 
 
 ## Assembling
 
-For all the parts next, id suggest you download the android APP or use other controller to navigate to a specific part on the menu.
+For all the parts next, I'd suggest you download the android APP or use other controller to navigate to a specific part on the menu.
 
 On the main menu, go to `scripts` then search for `control test`. Stay on that script with your protopanda open so you can test. 
-Make sure to paired before the controller at least once, because you cant enable the pairing mode while in a script.
+Make sure to paired before the controller at least once, because you can't enable the pairing mode while in a script.
 
-If you cant do any of these for the lack of a controller, then edit your init.lua
+If you can't do any of these for the lack of a controller, then edit your init.lua
 Find the `onPreflight` function and at the end of it add this:
 
 ```lua
@@ -143,7 +143,7 @@ You'll have to wire like the schematic above.
 
 ![alt text](guide-controller-10.png)
 
-When you turn on the controller now, it should not blink 5 times and on the Control Test script you should see a little line moving asd you wiggle the accelerometer
+When you turn on the controller now, it should not blink 5 times and on the Control Test script you should see a little line moving as you wiggle the accelerometer
 
 ![alt text](guide-controller-12.gif)
 
@@ -156,14 +156,14 @@ A single CR2032, as some know it "motherboard battery" has more than enough juic
 ![alt text](guide-controller-13.png)
 
 When you put a battery and toggle the switch, it should power on, and connect on the protopanda. 
-**Make sure you dont put the battery on the wrong orientation!**
+**Make sure you don't put the battery on the wrong orientation!**
 
 ### Button pad
 
 The button pad here is merely a suggestion. 
 Want your controller to be a like a TV remote? Go on!
 How about one button per finger? Go on!
-Its possible to replace the buttons with reed switches? Yep! Its gonna be wierd as f* but yeah.
+It's possible to replace the buttons with reed switches? Yep! It's gonna be weird as f* but yeah.
 
 **All you need to mark a button "pressed" is short GND with the correct GPIO.**
 
@@ -173,7 +173,7 @@ Alternatively if you're using XIAO Sense Plus
 
 ![alt text](guide-controller-16.png)
 
-For this guide, i'll be making a little keypad that is attached to the polegar. Lets start with it. You will need a piece of perfboard too.
+For this guide, I'll be making a little keypad that is attached to the polegar. Lets start with it. You will need a piece of perfboard too.
 
 ![alt text](guide-controller-17.png)
 
@@ -197,7 +197,7 @@ Then check if you wires correctly pressing in order like this gif:
 
 ![alt text](guide-controller-23.gif)
 
-Once its completed, you can remove with some cutting pliers or a dremel the edges and extra pcb around it.
+Once it's completed, you can remove with some cutting pliers or a dremel the edges and extra pcb around it.
 
 ![alt text](guide-controller-24.png)
 
@@ -207,16 +207,16 @@ Once its completed, you can remove with some cutting pliers or a dremel the edge
 
 ![alt text](guide-controller-26.png)
 
-Hands are a thing that move alot and the weakest point in this whole thing we did is where the wire meets the solder. So we need to remove some strain from it.
+Hands are a thing that move a lot and the weakest point in this whole thing we did is where the wire meets the solder. So we need to remove some strain from it.
 To do so, lets start with the controller wires. Apply some hot glue on the inner side of the PCB, then fold the wires over them. If necessary apply some on top.
 
 ![alt text](guide-controller-25.png)
 
 Do this for all the wires if possible. Otherwise they will break in less than a day of use.
 
-This part now is tricky, you might wanna 3d print a hand or fill the glove with something. Personally I like to use my hand on this step, its better but some dexterity is required.
+This part now is tricky, you might wanna 3d print a hand or fill the glove with something. Personally I like to use my hand on this step, it's better but some dexterity is required.
 
-With the glove on hand, put some hot glue (not too hot, make sure you dont burn yourself) on the polegar and stick the keypad there.
+With the glove on hand, put some hot glue (not too hot, make sure you don't burn yourself) on the polegar and stick the keypad there.
 
 ![alt text](guide-controller-27.png)
 
@@ -226,9 +226,9 @@ Pass the wires between the polegar and the index finger, put the controller on t
 
 Once it cools, add glue little by little on both the keypad, controller and accelerometer until they're attached really well. 
  
-> BE CAREFUL TO NOT SPILL HOT GLU ON THE USB PORT
+> BE CAREFUL TO NOT SPILL HOT GLUE ON THE USB PORT
 
-Now if you leave like this, there will be alot of strain in a single point of the wire, and the wire will be all over the place. To avoid that lets add some strain relifes and anchor points to the wires.
+Now if you leave like this, there will be a lot of strain in a single point of the wire, and the wire will be all over the place. To avoid that lets add some strain reliefs and anchor points to the wires.
 
 Like on the photo, add a dash of hot glue, then tidy the wires on it, add a bit on top and hold in place while it cools down:
 
@@ -238,9 +238,9 @@ Do this for at least 3 points of the keypad wire, and two for the battery wires.
 
 ![alt text](guide-controller-30.png)
 
-Make sure that all wires that are connected to the PCB have some strain releif point and when you move your hand **no wire on the solder joins move**.
+Make sure that all wires that are connected to the PCB have some strain relief point and when you move your hand **no wire on the solder joints move**.
 
-For the battery, the specific holder i got dont like to be glued, so i just leave it dangling or shove inside the glove.
+For the battery, the specific holder I got don't like to be glued, so I just leave it dangling or shove inside the glove.
 
 Once the glove is completed, you can build your protogen glove over this glove, just leave a hole for the polegar keypad. You operate using a pinch movement between the index and the polegar.
 As mentioned before, depending on your goal or needs, you can use bigger buttons, one button per finger, move the keypad to the top of the hand or even use it like a watch.
