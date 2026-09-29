@@ -25,7 +25,7 @@ Protopanda is an open source platform (firmware and hardware) for controlling pr
 7. [Face and Expressions](#face-and-expressions)
 8. [Compiling and flashing firmware](./doc/flashing-guide.md)
 9. [LED Strips](#led-strips)
-10. [Bluetooth](#bluetooth)
+10. [Remote controller](#remote-controller)
 11. [Hardware](#hardware)
 12. [DIY](#diy)
 13. [Printing and assembling guide](./doc/print-guide.md)
@@ -69,6 +69,7 @@ There are several guides with images and all!
 
 * [Printing and assembling guide](./doc/print-guide.md)
 * [Building your own protopanda (DIY)](./doc/diy-guide.md)
+* [Building the remote controller](./doc/controller-guide.md)
 * [Assembling the front frame with all parts](./doc/front-frame-guide.md)
 * [Flashing and compiling the firmware](./doc/flashing-guide.md)
 * [Configuring your protogen](./doc/configuring.md)
@@ -392,12 +393,11 @@ You can define them inside `hardware.json`:
 | `fade_in` | Gradual fade-in effect | `hue` (0-255), `saturation` (0-255), `step` (0-255), `delay` (ms) |
 | `noise` | Random noise effect | `step` (0-255), `delay` (ms) |
 
-## Bluetooth
-
-#### Remote Controller
+## Remote controller
 
 To control it, you can:
-* Use a Protopanda controller built with an NRF52832.
+* Use a Protopanda controller built with an [NRF52832/NRF52840 or ESP32Super mini](./doc/controller-guide.md)
+* Use the [android APP](https://play.google.com/store/apps/details?id=gay.protopanda.controller)
 * Use an IR controller and write a driver for it.
 * Write your own solution using the two extra GPIOs left.
 * Buy a BLE HID device that's compatible.
