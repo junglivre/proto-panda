@@ -58,13 +58,6 @@ local _M = {
     sysInfoScroll = 0,
 }
 
-local shaderNames = {
-    [SHADER_NONE] = 'NONE',
-    [SHADER_RAINBOW] = 'RAINBOW',
-    [SHADER_FIRE] = 'FIRE',
-    [SHADER_TEXTURE] = 'TEXTURE',
-}
-
 local function drawCenteredText(text, boxX, boxW, y, fontSize)
     fontSize = fontSize or 1
     local charWidth = 6 * fontSize
@@ -120,9 +113,11 @@ function _M.setup()
     _M.enterMainMenu()
     _M.face_selection_style = dictGet("face_selection_style") == "GRID" and "GRID" or "QUICK"
 
-    --settings ui
-    _M.settings = ui.generateUi("Press < To back", nil, _M.enterMainMenu)
 
+    _M.shader = tonumber(dictGet("default_shader")) or 0
+    setAnimationShader(_M.shader, 1.0)
+
+    _M.settings = ui.generateUi("Press < To back", nil, _M.enterMainMenu)
 
     if cfg.fft and cfg.fft.enabled then
         _M.settings.addElement(function() return "Calibrate mic volume" end,  function()
@@ -148,6 +143,8 @@ function _M.setup()
         if _M.shader > SHADER_LAST then  
             _M.shader = SHADER_NONE
         end
+        dictSet("default_shader", tostring(_M.shader))
+        dictSave()
         setAnimationShader(_M.shader, 1.0)
     end)
 
