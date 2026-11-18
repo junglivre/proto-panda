@@ -169,6 +169,9 @@ function _M.Load()
 		}
 		_M.collections[#_M.collections+1] = collection
 		for expression_index, expression_data in ipairs(collection_config.expressions or {}) do
+			if expression_data.breathing == nil and collection_data.breathing ~= nil then
+				expression_data.breathing = collection_data.breathing
+			end
 			local display_name = expression_data.name or ("expression "..expression_index)
 			expression_data.name = prefix..display_name
 			expression_data.display_name = display_name
@@ -322,8 +325,12 @@ function _M.SetExpression(id)
 		-- into a collection image that intentionally has no overlay.
 		local overlays = require("overlays")
 		overlays.disableAllOverlays()
+		setPanelBreathingEnabled(aux.breathing ~= false)
 		local repeats = aux.repeats or -1
 		local allDrop = true
+		local freezeFrame = aux.freeze_frame or -1
+		local freezeDurationMin = aux.freeze_duration_min or 0
+		local freezeDurationMax = aux.freeze_duration_max or 0
 		if aux.transition then 
 			if repeats == -1 then  
 				repeats = 1
@@ -343,6 +350,8 @@ function _M.SetExpression(id)
 
 		if aux.isModel then  
 			setPanelModelAnimation(aux.modelAnimId, repeats, allDrop, current_id)
+		elseif aux.freeze_frame ~= nil then
+			setPanelAnimationWithFreeze(aux.animation, aux.duration, repeats, allDrop, freezeFrame, freezeDurationMin, freezeDurationMax, current_id)
 		else
 			setPanelAnimation(aux.animation, aux.duration, repeats, allDrop, current_id)
 		end
@@ -377,7 +386,11 @@ end
 function _M.StackExpression(id)
 	local aux = _M.GetExpression(id)
 	if aux then 
+		setPanelBreathingEnabled(aux.breathing ~= false)
 		local repeats = aux.repeats or -1
+		local freezeFrame = aux.freeze_frame or -1
+		local freezeDurationMin = aux.freeze_duration_min or 0
+		local freezeDurationMax = aux.freeze_duration_max or 0
 		if aux.transition then 
 			if repeats == -1 then  
 				repeats = 1
@@ -386,6 +399,8 @@ function _M.StackExpression(id)
 		local current_id = aux.id 
 		if aux.isModel then  
 			setPanelModelAnimation(aux.modelAnimId, repeats, false, current_id)
+		elseif aux.freeze_frame ~= nil then
+			setPanelAnimationWithFreeze(aux.animation, aux.duration, repeats, false, freezeFrame, freezeDurationMin, freezeDurationMax, current_id)
 		else
 			setPanelAnimation(aux.animation, aux.duration, repeats, false, current_id)
 		end

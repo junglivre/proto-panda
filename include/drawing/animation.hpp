@@ -29,9 +29,9 @@ extern FrameRepository g_frameRepo;
 
 class AnimationSequence{
     public:
-        AnimationSequence():m_duration(2500),m_frame(0),m_counter(0),m_repeat(-1),m_updateMode(0),m_storageId(-1),m_isNew(true),m_isModel(false){}
+        AnimationSequence():m_duration(2500),m_frame(0),m_counter(0),m_repeat(-1),m_updateMode(0),m_storageId(-1),m_freezeFrame(-1),m_freezeDurationMin(0),m_freezeDurationMax(0),m_freezeStartTime(0),m_freezeDuration(0),m_breathingEnabled(true),m_isNew(true),m_isModel(false){}
         PSRAMVector<int> m_frames;
-        AnimationFrameAction Update(uint32_t dt, int m_interruptPin, bool isManaged, ShaderType &shdr, float &strenghy);
+        AnimationFrameAction Update(uint32_t dt, int m_interruptPin, bool isManaged, ShaderType &shdr, float &strenghy, bool randomBlinkEnabled);
         inline int GetFrameId();
         void ResetIfNeeded();
         int m_duration;
@@ -40,6 +40,12 @@ class AnimationSequence{
         int m_repeat;
         int m_updateMode;
         int m_storageId;
+        int m_freezeFrame;
+        int m_freezeDurationMin;
+        int m_freezeDurationMax;
+        uint32_t m_freezeStartTime;
+        uint32_t m_freezeDuration;
+        bool m_breathingEnabled;
         bool m_isNew;
         bool m_isModel;
     private:
@@ -50,13 +56,14 @@ class AnimationSequence{
 
 class Animation{
     public:
-        Animation():m_animations(),m_shader(SHADER_NONE),m_shaderStrenght(1.0f),m_lastFace(0),m_interruptPin(-1),m_colorMode(COLOR_MODE_RGB),m_needFlip(false),m_isManaged(true),m_needRedraw(false),m_onBlankScreen(false),m_copyToFrameBuffer(false),m_fftOverlay(false),m_forceRedraw(false),m_frameDrawDuration(0),m_texture(nullptr),m_frameBuffer(nullptr),m_frameLoadDuration(0),m_cycleDuration(0),m_mutex(xSemaphoreCreateMutex()),m_SpriteMutex(xSemaphoreCreateMutex()){};
+        Animation():m_animations(),m_shader(SHADER_NONE),m_shaderStrenght(1.0f),m_lastFace(0),m_interruptPin(-1),m_colorMode(COLOR_MODE_RGB),m_needFlip(false),m_isManaged(true),m_needRedraw(false),m_onBlankScreen(false),m_copyToFrameBuffer(false),m_fftOverlay(false),m_forceRedraw(false),m_breathingEnabled(true),m_breathingGloballyEnabled(true),m_randomBlinkEnabled(true),m_lastBreathingDraw(0),m_frameDrawDuration(0),m_texture(nullptr),m_frameBuffer(nullptr),m_frameLoadDuration(0),m_cycleDuration(0),m_mutex(xSemaphoreCreateMutex()),m_SpriteMutex(xSemaphoreCreateMutex()){};
         void Allocate();
         void Update(uint32_t dt);
 
         void SetModelAnimation(int animationId, int repeatTimes, bool dropAll, int externalStorageId=-1);
 
         void SetAnimation(std::vector<int> frames, int duration, int repeatTimes, bool dropAll, int externalStorageId=-1);
+        void SetAnimationWithFreeze(std::vector<int> frames, int duration, int repeatTimes, bool dropAll, int freezeFrame, int freezeDurationMin, int freezeDurationMax, int externalStorageId=-1);
         void SetInterruptAnimation(int duration, std::vector<int> frames);
         void SetInterruptPin(int pin){
               if (pin > 0){
@@ -78,6 +85,17 @@ class Animation{
         void MakeFlip();
         void SetShader(int id, float strenght=1.0f);
         void SetFFTOverlay(bool set);
+        void SetBreathingEnabled(bool enabled){
+            m_breathingEnabled = enabled;
+            m_needRedraw = true;
+        }
+        void SetBreathingGloballyEnabled(bool enabled){
+            m_breathingGloballyEnabled = enabled;
+            m_lastBreathingDraw = 0;
+            m_needRedraw = true;
+        }
+        void SetRandomBlinkEnabled(bool enabled){ m_randomBlinkEnabled = enabled; }
+        bool isBreathingEnabled() const { return m_breathingEnabled && m_breathingGloballyEnabled; }
 
         uint16_t* GetTexture(){
             return m_texture;
@@ -142,6 +160,10 @@ class Animation{
         bool m_copyToFrameBuffer;
         bool m_fftOverlay;
         bool m_forceRedraw;
+        bool m_breathingEnabled;
+        bool m_breathingGloballyEnabled;
+        bool m_randomBlinkEnabled;
+        uint32_t m_lastBreathingDraw;
 
         uint16_t *m_texture,*m_frameBuffer;
         
