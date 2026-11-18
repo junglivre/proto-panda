@@ -15,6 +15,8 @@
 #endif
 
 #include <FFat.h>
+#include <cstring>
+#include <string>
 
 template<typename... arg> void FrameBufferCriticalError(File *bulkFile, const char *c, const arg&... a )
 {
@@ -25,6 +27,114 @@ template<typename... arg> void FrameBufferCriticalError(File *bulkFile, const ch
     OledScreen::CriticalFail(auxBuff);
     for(;;){}
 }
+
+namespace {
+
+std::string collectionConfigPath(const std::string &collectionName, const char *configuredPath) {
+    std::string path = configuredPath && configuredPath[0]
+        ? configuredPath
+        : "/expressions/collections/" + collectionName;
+    while (path.size() > 1 && path.back() == '/') {
+        path.pop_back();
+    }
+    return path + "/animation.json";
+}
+
+std::string collectionAssetPath(const std::string &basePath, const char *assetPath) {
+    if (assetPath && assetPath[0] == '/') {
+        return assetPath;
+    }
+    return basePath + "/" + (assetPath ? assetPath : "");
+}
+
+// Merge the frame descriptors from each collection into the root document.
+// The bulk composer can then use its existing frame path without knowing if a
+// frame came from the root animation.json or a collection-local one.
+bool appendCollectionFrames(JsonDocument &root, std::string &error) {
+    if (!root["expression_collections"].is<JsonArray>()) {
+        return true;
+    }
+
+    JsonArray targetFrames = root["frames"].as<JsonArray>();
+    if (targetFrames.isNull()) {
+        error = "Missing 'frames' in root animation.json";
+        return false;
+    }
+
+    size_t collectionIndex = 0;
+    for (JsonVariant collection : root["expression_collections"].as<JsonArray>()) {
+        collectionIndex++;
+        if (!collection.is<JsonObject>()) {
+            error = "A collection entry must be an object";
+            return false;
+        }
+        const char *configuredName = collection["name"].as<const char *>();
+        const std::string collectionName = configuredName && configuredName[0]
+            ? configuredName
+            : "Collection " + std::to_string(collectionIndex);
+        const char *configuredPath = collection["path"].as<const char *>();
+        std::string configPath = collectionConfigPath(collectionName, configuredPath);
+        const std::string basePath = configPath.substr(0, configPath.size() - strlen("/animation.json"));
+
+        File file = PANDA_SD.open(configPath.c_str(), FILE_READ);
+        if (!file) {
+            error = "Can't open collection config " + configPath;
+            return false;
+        }
+
+        SpiRamAllocator allocator;
+        JsonDocument collectionDocument(&allocator);
+        const auto parseError = deserializeJson(collectionDocument, file);
+        file.close();
+        if (parseError) {
+            error = configPath + ": " + parseError.c_str();
+            return false;
+        }
+        if (!collectionDocument["frames"].is<JsonArray>()) {
+            error = "Missing 'frames' in " + configPath;
+            return false;
+        }
+
+        const std::string aliasPrefix = "collection:" + collectionName + ":";
+        for (JsonVariant source : collectionDocument["frames"].as<JsonArray>()) {
+            if (!source.is<JsonObject>()) {
+                error = "Collection frame entry must be an object in " + configPath;
+                return false;
+            }
+
+            JsonObject target = targetFrames.add<JsonObject>();
+            for (JsonPair pair : source.as<JsonObject>()) {
+                target[pair.key()] = pair.value();
+            }
+
+            if (!target["name"].is<const char *>()) {
+                error = "Collection frame entry is missing a string 'name' in " + configPath;
+                return false;
+            }
+            const std::string alias = aliasPrefix + target["name"].as<const char *>();
+            target["name"] = alias;
+            if (target["file"].is<const char *>()) {
+                const std::string path = collectionAssetPath(basePath, target["file"].as<const char *>());
+                target["file"] = path;
+            }
+            if (target["pattern"].is<const char *>()) {
+                const std::string path = collectionAssetPath(basePath, target["pattern"].as<const char *>());
+                target["pattern"] = path;
+            }
+            if (target["files"].is<JsonArray>()) {
+                for (JsonVariant asset : target["files"].as<JsonArray>()) {
+                    if (asset.is<const char *>()) {
+                        const std::string path = collectionAssetPath(basePath, asset.as<const char *>());
+                        asset.set(path);
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
+} // namespace
 
  
 
@@ -202,6 +312,12 @@ bool FrameRepository::loadCachedData(){
        return false;
     }
 
+    std::string collectionError;
+    if (!appendCollectionFrames(json_doc_aux, collectionError)) {
+        Logger::Error("Failed to load expression collection: %s", collectionError.c_str());
+        return false;
+    }
+
     JsonArray framesJson = json_doc_aux["frames"];
     int actualFrameCount = calculateMaxFrames(framesJson);
     json_doc_aux.clear();
@@ -227,8 +343,8 @@ bool FrameRepository::loadCachedData(){
 
     JsonArray frame_flash_offset_arr = json_doc["frame_flash_offset"];
     if (m_bulkFileOffset != nullptr){
-        m_bulkFileOffset = nullptr;
         heap_caps_free(m_bulkFileOffset);
+        m_bulkFileOffset = nullptr;
     }
     m_bulkFileOffset = (int*)heap_caps_malloc(sizeof(int) * (frame_count+2), MALLOC_CAP_SPIRAM);
     memset(m_bulkFileOffset, 0, sizeof(int) * (frame_count+1));
@@ -335,6 +451,16 @@ void FrameRepository::composeBulkFile(){
         OledScreen::CriticalFail("Missing 'frames' in json!");
     }
 
+    std::string collectionError;
+    if (!appendCollectionFrames(json_doc, collectionError)) {
+        char collectionErrorBuffer[1100];
+        snprintf(collectionErrorBuffer, sizeof(collectionErrorBuffer), "Collection error:\n%s", collectionError.c_str());
+        OledScreen::CriticalFail(collectionErrorBuffer);
+        bulkFile.close();
+        xSemaphoreGive(m_mutex);
+        return;
+    }
+
     JsonArray framesJson = json_doc["frames"];
     char headerFileName[1024];
     char miniHBuffer[1100];
@@ -355,7 +481,9 @@ void FrameRepository::composeBulkFile(){
         heap_caps_free(m_bulkFileOffset);
         m_bulkFileOffset = nullptr;
     }
-    m_bulkFileOffset = (int*)heap_caps_malloc(sizeof(int) * maxFrames, MALLOC_CAP_SPIRAM);
+    // One additional item stores the final bulk-file size as the offset after
+    // the last frame (and is serialized into cache.json).
+    m_bulkFileOffset = (int*)heap_caps_malloc(sizeof(int) * (maxFrames + 1), MALLOC_CAP_SPIRAM);
     PSRAMString currentName;
     m_compressionBuffer = (uint16_t*)heap_caps_malloc(sizeof(uint16_t) * FILE_SIZE_BULK_SIZE * 2, MALLOC_CAP_SPIRAM);
     OledScreen::SetConsoleMode(false);
